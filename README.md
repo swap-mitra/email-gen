@@ -1,18 +1,20 @@
-# 📧 Cold Mail Generator
-Cold email generator for services company using groq, langchain and streamlit. It allows users to input the URL of a company's careers page. The tool then extracts job listings from that page and generates personalized cold emails. These emails include relevant portfolio links sourced from a vector database, based on the specific job descriptions. 
+# 📧 Email Generator
+An email generator for a services company using Grow, Langchain, and Streamlet allows users to input the URL of a company's careers page. The tool then extracts job listings from that page and generates personalized cold emails. These emails include relevant portfolio links sourced from a vector database based on the specific job descriptions. 
 
 **Imagine a scenario:**
 
-- Nike needs a Principal Software Engineer and is spending time and resources in the hiring process, on boarding, training etc
-- Atliq is Software Development company can provide a dedicated software development engineer to Nike. So, the business development executive (Mohan) from Atliq is going to reach out to Nike via a cold email.
+- Nike needs a Principal Software Engineer and is spending time and resources in the hiring process, onboarding, training, etc
+- XYZ is a Software Development company that can provide Nike with a dedicated software development engineer. So, the business development executive (Travis) from XYZ is going to reach out to Nike via a cold email.
 
-![img.png](imgs/img.png)
+![image](https://github.com/user-attachments/assets/f56d32ed-cebe-4547-b098-fd320cfb7287)
+
 
 ## Architecture Diagram
-![img.png](imgs/architecture.png)
+![image](https://github.com/user-attachments/assets/a08e3e7d-32a6-4b60-8fcd-d6d8924b3a31)
+
 
 ## Set-up
-1. To get started we first need to get an API_KEY from here: https://console.groq.com/keys. Inside `app/.env` update the value of `GROQ_API_KEY` with the API_KEY you created. 
+1. To get started, we first need to get an API_KEY from here: https://console.groq.com/keys. Inside `app/.env`, update the value of `GROQ_API_KEY` with the API_KEY you created. 
 
 
 2. To get started, first install the dependencies using:
@@ -24,9 +26,8 @@ Cold email generator for services company using groq, langchain and streamlit. I
    ```commandline
    streamlit run app/main.py
    ```
-   
 
-Copyright (C) Codebasics Inc. All rights reserved.
 
-**Additional Terms:**
+
+**Additional Terms**
 This software is licensed under the MIT License. However, commercial use of this software is strictly prohibited without prior written permission from the author. Attribution must be given in all copies or substantial portions of the software.
