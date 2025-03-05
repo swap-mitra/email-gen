@@ -1,4 +1,4 @@
-# 📧 Email Generator
+# 📧 Cold Mail Generator
 An email generator for a services company using Grow, Langchain, and Streamlet allows users to input the URL of a company's careers page. The tool then extracts job listings from that page and generates personalized cold emails. These emails include relevant portfolio links sourced from a vector database based on the specific job descriptions. 
 
 **Imagine a scenario:**
