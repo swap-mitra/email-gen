@@ -1,4 +1,5 @@
 import os
+import re
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -32,6 +33,12 @@ class Chain:
             raise OutputParserException("Context too big. Unable to parse jobs.")
         return res if isinstance(res, list) else [res]
     
+    def remove_think(self, text):
+        """
+        Remove any chain-of-thought content enclosed in <think> ... </think> tags.
+        """
+        return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    
     def write_mail(self, job, links):
         prompt_email = PromptTemplate.from_template(
             """
@@ -46,12 +53,14 @@ class Chain:
             Your job is to write a cold email to the client regarding the job mentioned above describing the capability of XYZ 
             in fulfilling their needs.
             Also add the most relevant ones from the following links to showcase Atliq's portfolio: {link_list}
-            Remember you are Mohan, BDE at XYZ. 
-            Do not provide a preamble.
+            Remember you are Travis Bickle, BDE at XYZ.
+            Do not provide any internal chain-of-thought, reasoning, or preamble; only provide the final email. 
             ### EMAIL (NO PREAMBLE):
 
             """
         )
         chain_email = prompt_email | self.llm
         res = chain_email.invoke({"job_description": str(job), "link_list": links})
-        return res.content
+        # Remove any <think> tags from the final response
+        final_email = self.remove_think(res.content)
+        return final_email
