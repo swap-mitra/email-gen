@@ -1,16 +1,27 @@
 import os
 import re
+import streamlit as st
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.exceptions import OutputParserException
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 class Chain:
     def __init__(self):
-        self.llm = ChatGroq(temperature=0, groq_api_key=os.getenv("GROQ_API_KEY"), model="deepseek-r1-distill-llama-70b")
+        # Try to get API key from Streamlit secrets first, then fall back to env variable
+        api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
+        if not api_key:
+            raise ValueError("GROQ_API_KEY not found in environment variables or Streamlit secrets")
+            
+        self.llm = ChatGroq(
+            temperature=0, 
+            groq_api_key=api_key, 
+            model="deepseek-r1-distill-llama-70b"
+        )
 
     def extract_jobs(self, cleaned_text):
         prompt_extract = PromptTemplate.from_template(

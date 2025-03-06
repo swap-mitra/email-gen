@@ -1,3 +1,9 @@
+# Import sqlite fix before any other imports
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sqlite_fix
+
 import streamlit as st
 from langchain_community.document_loaders import WebBaseLoader
 
@@ -31,4 +37,3 @@ if __name__ == "__main__":
     portfolio = Portfolio()
     st.set_page_config(layout="wide", page_title="Cold Email Generator", page_icon="📧")
     create_streamlit_app(chain, portfolio, clean_text)
-
