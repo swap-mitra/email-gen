@@ -1,33 +1,99 @@
-# 📧 Cold Mail Generator
-An email generator for a services company using Grow, Langchain, and Streamlet allows users to input the URL of a company's careers page. The tool then extracts job listings from that page and generates personalized cold emails. These emails include relevant portfolio links sourced from a vector database based on the specific job descriptions. 
+# email_gen
 
-**Imagine a scenario:**
+`email_gen` is a spec-driven outreach workflow application built with Next.js and TypeScript.
 
-- Nike needs a Principal Software Engineer and is spending time and resources in the hiring process, onboarding, training, etc
-- XYZ is a Software Development company that can provide Nike with a dedicated software development engineer. So, the business development executive (Travis) from XYZ is going to reach out to Nike via a cold email.
+The product is designed for teams that turn company or job URLs into grounded outbound email drafts, review them with evidence, and prepare them for future MCP-based delivery workflows.
 
-![image](https://github.com/user-attachments/assets/f56d32ed-cebe-4547-b098-fd320cfb7287)
+## Core stack
 
+- Next.js 15
+- React 19
+- TypeScript
+- Clerk for authentication and organizations
+- PostgreSQL + pgvector
+- Drizzle ORM
+- Zod
+- Inngest for background workflows
 
-## Architecture Diagram
-![image](https://github.com/user-attachments/assets/a08e3e7d-32a6-4b60-8fcd-d6d8924b3a31)
+## Current product foundation
 
+The repository currently includes:
 
-## Set-up
-1. To get started, we first need to get an API_KEY from here: https://console.groq.com/keys. Inside `app/.env`, update the value of `GROQ_API_KEY` with the API_KEY you created. 
+- public landing page
+- Clerk-backed auth routes
+- protected dashboard shell
+- workspace resolution based on the active Clerk organization
+- initial Drizzle schema and first migration
+- workspace activity log foundation
+- typed API contracts and workspace context endpoint
 
+## Local setup
 
-2. To get started, first install the dependencies using:
-    ```commandline
-     pip install -r requirements.txt
-    ```
-   
-3. Run the streamlit app:
-   ```commandline
-   streamlit run app/main.py
-   ```
+1. Install dependencies:
 
+```bash
+npm install
+```
 
+2. Create local environment variables:
 
-**Additional Terms**
-This software is licensed under the MIT License. However, commercial use of this software is strictly prohibited without prior written permission from the author. Attribution must be given in all copies or substantial portions of the software.
+```bash
+copy .env.example .env.local
+```
+
+3. Apply the database schema against your PostgreSQL database:
+
+```bash
+npm run db:generate
+npm run db:push
+```
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
+
+## Required environment variables
+
+```bash
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/email_gen
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+CLERK_SIGN_IN_URL=/sign-in
+CLERK_SIGN_UP_URL=/sign-up
+OPENAI_API_KEY=
+BROWSERBASE_API_KEY=
+BROWSERBASE_PROJECT_ID=
+BLOB_READ_WRITE_TOKEN=
+INNGEST_EVENT_KEY=
+INNGEST_SIGNING_KEY=
+```
+
+## Quality checks
+
+Run these after changes:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+cmd /c rmdir /s /q .next
+npm run build
+```
+
+## Specs
+
+The implementation roadmap lives in `docs/specs/`.
+
+- `001-product-spec.md`
+- `002-domain-model.md`
+- `003-api-spec.md`
+- `004-ai-retrieval-spec.md`
+- `005-ingestion-spec.md`
+- `006-auth-tenancy-spec.md`
+- `007-ui-spec.md`
+- `008-async-workflow-spec.md`
+- `009-observability-spec.md`
+- `010-future-delivery-spec.md`

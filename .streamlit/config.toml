@@ -1,5 +1,0 @@
-[server]
-enableCORS = false
-
-[browser]
-gatherUsageStats = false
