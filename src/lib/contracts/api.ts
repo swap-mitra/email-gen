@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// ---------------------------------------------------------------------------
+// Error envelope
+// ---------------------------------------------------------------------------
+
 export const apiErrorCodeSchema = z.enum([
   "bad_request",
   "unauthorized",
@@ -19,11 +23,19 @@ export const apiErrorSchema = z.object({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Health
+// ---------------------------------------------------------------------------
+
 export const healthResponseSchema = z.object({
   ok: z.literal(true),
   service: z.literal("web"),
   version: z.number().int().positive(),
 });
+
+// ---------------------------------------------------------------------------
+// Workspace / auth context
+// ---------------------------------------------------------------------------
 
 export const workspaceSummarySchema = z.object({
   id: z.string().uuid(),
@@ -51,7 +63,154 @@ export const workspaceContextResponseSchema = z.object({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Opportunities
+// ---------------------------------------------------------------------------
+
+export const ingestStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+
+export const createOpportunityRequestSchema = z.object({
+  /** Public URL of the job posting or company page. */
+  sourceUrl: z.string().url(),
+});
+
+export const opportunitySchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  sourceUrl: z.string().url(),
+  ingestStatus: ingestStatusSchema,
+  rawContent: z.string().nullable(),
+  normalizedFields: z.record(z.string(), z.unknown()).nullable(),
+  extractionMeta: z.record(z.string(), z.unknown()).nullable(),
+  ingestError: z.string().nullable(),
+  ingestAttempts: z.number().int(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+// ---------------------------------------------------------------------------
+// Knowledge items
+// ---------------------------------------------------------------------------
+
+export const createKnowledgeItemRequestSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  /** Arbitrary metadata attached to this knowledge item (tags, source URL, etc.) */
+  meta: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const knowledgeItemSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  title: z.string(),
+  content: z.string(),
+  meta: z.record(z.string(), z.unknown()),
+  /** Whether an embedding vector has been generated for this item. */
+  embedded: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+// ---------------------------------------------------------------------------
+// Drafts & versions
+// ---------------------------------------------------------------------------
+
+export const generationStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+export const draftSourceSchema = z.enum(["ai_generated", "human_revised"]);
+
+export const createDraftRequestSchema = z.object({
+  opportunityId: z.string().uuid(),
+});
+
+export const reviseDraftRequestSchema = z.object({
+  subject: z.string().min(1),
+  body: z.string().min(1),
+});
+
+export const draftVersionSchema = z.object({
+  id: z.string().uuid(),
+  draftId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  versionNumber: z.number().int().positive(),
+  subject: z.string(),
+  body: z.string(),
+  /** IDs of knowledge_items used to ground this version. */
+  groundingRefs: z.array(z.string().uuid()),
+  source: draftSourceSchema,
+  authorClerkUserId: z.string().nullable(),
+  createdAt: z.coerce.date(),
+});
+
+export const draftSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  opportunityId: z.string().uuid(),
+  state: z.string(),
+  generationStatus: generationStatusSchema,
+  generationError: z.string().nullable(),
+  /** The most recent version, if any has been generated. */
+  latestVersion: draftVersionSchema.nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+// ---------------------------------------------------------------------------
+// Approvals
+// ---------------------------------------------------------------------------
+
+export const approveDraftRequestSchema = z.object({
+  /** Optional reviewer note attached to the approval. */
+  note: z.string().optional(),
+});
+
+export const approvalSchema = z.object({
+  id: z.string().uuid(),
+  draftId: z.string().uuid(),
+  draftVersionId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  reviewerClerkUserId: z.string(),
+  note: z.string().nullable(),
+  createdAt: z.coerce.date(),
+});
+
+// ---------------------------------------------------------------------------
+// Activities
+// ---------------------------------------------------------------------------
+
+export const activitySchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  actorClerkUserId: z.string().nullable(),
+  kind: z.string(),
+  entityType: z.string(),
+  entityId: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  createdAt: z.coerce.date(),
+});
+
+export const activitiesResponseSchema = z.object({
+  items: z.array(activitySchema),
+});
+
+// ---------------------------------------------------------------------------
+// Inferred types
+// ---------------------------------------------------------------------------
+
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 export type WorkspaceContextResponse = z.infer<typeof workspaceContextResponseSchema>;
+export type IngestStatus = z.infer<typeof ingestStatusSchema>;
+export type CreateOpportunityRequest = z.infer<typeof createOpportunityRequestSchema>;
+export type OpportunityResponse = z.infer<typeof opportunitySchema>;
+export type CreateKnowledgeItemRequest = z.infer<typeof createKnowledgeItemRequestSchema>;
+export type KnowledgeItemResponse = z.infer<typeof knowledgeItemSchema>;
+export type GenerationStatus = z.infer<typeof generationStatusSchema>;
+export type CreateDraftRequest = z.infer<typeof createDraftRequestSchema>;
+export type ReviseDraftRequest = z.infer<typeof reviseDraftRequestSchema>;
+export type DraftVersionResponse = z.infer<typeof draftVersionSchema>;
+export type DraftResponse = z.infer<typeof draftSchema>;
+export type ApproveDraftRequest = z.infer<typeof approveDraftRequestSchema>;
+export type ApprovalResponse = z.infer<typeof approvalSchema>;
+export type ActivityResponse = z.infer<typeof activitySchema>;
+export type ActivitiesResponse = z.infer<typeof activitiesResponseSchema>;

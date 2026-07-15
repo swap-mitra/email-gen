@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -228,6 +229,93 @@ export const activities = pgTable("activities", {
   payload: jsonb("payload").$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+
+// ---------------------------------------------------------------------------
+// Relations (TypeScript-only, no DDL)
+// ---------------------------------------------------------------------------
+
+export const workspacesRelations = relations(workspaces, ({ many }) => ({
+  memberships: many(workspaceMemberships),
+  opportunities: many(opportunities),
+  knowledgeItems: many(knowledgeItems),
+  drafts: many(drafts),
+  draftVersions: many(draftVersions),
+  approvals: many(approvals),
+  activities: many(activities),
+}));
+
+export const workspaceMembershipsRelations = relations(workspaceMemberships, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceMemberships.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const opportunitiesRelations = relations(opportunities, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [opportunities.workspaceId],
+    references: [workspaces.id],
+  }),
+  drafts: many(drafts),
+}));
+
+export const knowledgeItemsRelations = relations(knowledgeItems, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [knowledgeItems.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const draftsRelations = relations(drafts, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [drafts.workspaceId],
+    references: [workspaces.id],
+  }),
+  opportunity: one(opportunities, {
+    fields: [drafts.opportunityId],
+    references: [opportunities.id],
+  }),
+  versions: many(draftVersions),
+  approvals: many(approvals),
+}));
+
+export const draftVersionsRelations = relations(draftVersions, ({ one }) => ({
+  draft: one(drafts, {
+    fields: [draftVersions.draftId],
+    references: [drafts.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [draftVersions.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const approvalsRelations = relations(approvals, ({ one }) => ({
+  draft: one(drafts, {
+    fields: [approvals.draftId],
+    references: [drafts.id],
+  }),
+  draftVersion: one(draftVersions, {
+    fields: [approvals.draftVersionId],
+    references: [draftVersions.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [approvals.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [activities.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Inferred types
+// ---------------------------------------------------------------------------
 
 export type Workspace = typeof workspaces.$inferSelect;
 export type WorkspaceMembership = typeof workspaceMemberships.$inferSelect;
