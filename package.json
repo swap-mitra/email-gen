@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.1",
+    "cheerio": "^1.2.0",
     "drizzle-orm": "^0.44.2",
+    "inngest": "^4.13.0",
     "next": "^15.5.0",
     "postgres": "^3.4.9",
     "react": "^19.1.1",

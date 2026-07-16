@@ -5,6 +5,7 @@ import { opportunitySchema } from "@/lib/contracts/api";
 import { opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { inngest, OPPORTUNITY_INGEST_EVENT } from "@/lib/inngest";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export async function POST(
@@ -78,7 +79,17 @@ export async function POST(
       payload: { attempt: updated.ingestAttempts },
     });
 
-    // TODO(p3): dispatch Inngest `ingest-opportunity` event with id
+    // Dispatch a new ingest run. Attempt number in the key ensures a
+    // fresh Inngest execution even if the previous one is still in the log.
+    await inngest.send({
+      id: `opportunity-ingest-${id}-attempt-${updated.ingestAttempts}`,
+      name: OPPORTUNITY_INGEST_EVENT,
+      data: {
+        opportunityId: id,
+        workspaceId: context.workspace.id,
+        attempt: updated.ingestAttempts,
+      },
+    });
 
     return NextResponse.json(opportunitySchema.parse(updated));
   } catch (error) {

@@ -5,6 +5,7 @@ import { createDraftRequestSchema, draftSchema } from "@/lib/contracts/api";
 import { drafts, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { inngest } from "@/lib/inngest";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export async function POST(req: Request) {
@@ -75,7 +76,15 @@ export async function POST(req: Request) {
       payload: { opportunityId: data.opportunityId },
     });
 
-    // TODO(p3): dispatch Inngest `generate-draft` event with draft.id
+    await inngest.send({
+      id: `draft-generate-${draft.id}`,
+      name: "email-gen/draft.generate",
+      data: {
+        draftId: draft.id,
+        workspaceId: context.workspace.id,
+        opportunityId: data.opportunityId,
+      },
+    });
 
     return NextResponse.json(
       draftSchema.parse({ ...draft, latestVersion: null }),

@@ -4,6 +4,7 @@ import { createOpportunityRequestSchema, opportunitySchema } from "@/lib/contrac
 import { opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { inngest, OPPORTUNITY_INGEST_EVENT } from "@/lib/inngest";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export async function POST(req: Request) {
@@ -49,7 +50,17 @@ export async function POST(req: Request) {
       payload: { sourceUrl: data.sourceUrl },
     });
 
-    // TODO(p3): dispatch Inngest `ingest-opportunity` event with opportunity.id
+    // Dispatch the ingest-opportunity Inngest function.
+    // Idempotency key prevents duplicate runs if this fires twice.
+    await inngest.send({
+      id: `opportunity-ingest-${opportunity.id}-attempt-1`,
+      name: OPPORTUNITY_INGEST_EVENT,
+      data: {
+        opportunityId: opportunity.id,
+        workspaceId: context.workspace.id,
+        attempt: 1,
+      },
+    });
 
     return NextResponse.json(opportunitySchema.parse(opportunity), { status: 201 });
   } catch (error) {
