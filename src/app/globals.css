@@ -40,6 +40,7 @@ html {
 body {
   min-height: 100vh;
   background: var(--ground);
+  line-height: 1.5;
 }
 
 a {
@@ -53,14 +54,14 @@ a {
 .t-display {
   font-family: var(--font-display);
   font-weight: 800;
-  line-height: 0.93;
+  line-height: 1.08;
   letter-spacing: -0.02em;
 }
 
 .t-heading {
   font-family: var(--font-display);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
@@ -244,7 +245,8 @@ a {
 }
 
 .hero-headline {
-  font-size: clamp(3.5rem, 8vw, 7.5rem);
+  font-size: clamp(2.8rem, 8vw, 7.5rem);
+  line-height: 1.1;
   max-width: 14ch;
   margin-bottom: 32px;
 }
@@ -252,7 +254,11 @@ a {
 .hero-headline em {
   font-style: normal;
   background: var(--yellow);
-  padding: 0 6px;
+  /* Render a complete box on every wrapped line */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 8px;
+  margin: 0 -2px;
 }
 
 .hero-body {
@@ -383,6 +389,7 @@ a {
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .ws-bar-name p {
@@ -665,6 +672,7 @@ a {
   }
 
   .hero-headline {
-    font-size: clamp(2.6rem, 11vw, 4rem);
+    font-size: clamp(2rem, 10vw, 3.2rem);
+    line-height: 1.12;
   }
 }
