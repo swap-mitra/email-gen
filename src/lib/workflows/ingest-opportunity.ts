@@ -5,6 +5,12 @@ import { opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { fetchAndExtractContent, extractNormalizedFields } from "@/lib/ingestion/fetch-content";
+import { browserbaseFetch } from "@/lib/ingestion/browser-fallback";
+import { persistRawHtmlArtifact } from "@/lib/ingestion/persist-artifact";
+
+// ---------------------------------------------------------------------------
+// ingest-opportunity — full P3+P4 durable step function
+// ---------------------------------------------------------------------------
 
 export const ingestOpportunity = inngest.createFunction(
   {
@@ -12,7 +18,7 @@ export const ingestOpportunity = inngest.createFunction(
     name: "Ingest Opportunity",
     retries: 3,
     triggers: [{ event: OPPORTUNITY_INGEST_EVENT }],
-    // Prevent concurrent runs for the same opportunity
+    // One run at a time per opportunity — prevents duplicate parallel ingests
     concurrency: {
       limit: 1,
       key: "event.data.opportunityId",
@@ -38,8 +44,8 @@ export const ingestOpportunity = inngest.createFunction(
       });
     });
 
-    // ── Step 2: Fetch and extract content ────────────────────────────────
-    const extracted = await step.run("fetch-and-extract", async () => {
+    // ── Step 2: Direct fetch + HTML extraction ───────────────────────────
+    const directResult = await step.run("fetch-and-extract", async () => {
       const db = getDb();
 
       const opportunity = await db.query.opportunities.findFirst({
@@ -48,7 +54,7 @@ export const ingestOpportunity = inngest.createFunction(
 
       if (!opportunity) {
         throw new NonRetriableError(
-          `Opportunity ${opportunityId} not found — skipping ingestion.`,
+          `Opportunity ${opportunityId} not found — aborting ingestion.`,
         );
       }
 
@@ -57,7 +63,7 @@ export const ingestOpportunity = inngest.createFunction(
         content = await fetchAndExtractContent(opportunity.sourceUrl);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        throw new Error(`Fetch failed: ${message}`);
+        throw new Error(`Direct fetch failed: ${message}`);
       }
 
       if (content.statusCode >= 400) {
@@ -66,21 +72,31 @@ export const ingestOpportunity = inngest.createFunction(
         );
       }
 
+      // Persist raw HTML artifact (non-fatal if Blob is not configured)
+      const rawHtmlBlobUrl = await persistRawHtmlArtifact(
+        opportunityId,
+        content.rawHtml,
+        "direct",
+      );
+
       return {
-        rawHtml: content.rawHtml,
         text: content.text,
         title: content.title,
         description: content.description,
         isInsufficient: content.isInsufficient,
         sourceUrl: opportunity.sourceUrl,
+        rawHtmlBlobUrl,
       };
     });
 
-    // ── Step 3: Browser fallback (Browserbase / Playwright) ─────────────
-    //    Only triggered when direct fetch yields insufficient content.
-    //    TODO(p4-browser): wire up Browserbase SDK when credentials are present.
-    const usedBrowserFallback = await step.run("browser-fallback", async () => {
-      if (!extracted.isInsufficient) return false;
+    // ── Step 3: Browser fallback via Browserbase ─────────────────────────
+    //    Triggered only when direct fetch produces insufficient text content.
+    //    Gracefully skipped if Browserbase credentials are not configured.
+    const browserResult = await step.run("browser-fallback", async () => {
+      // Fast path: direct fetch was sufficient
+      if (!directResult.isInsufficient) {
+        return { used: false, ...directResult };
+      }
 
       const hasBrowserbaseConfig =
         !!process.env.BROWSERBASE_API_KEY && !!process.env.BROWSERBASE_PROJECT_ID;
@@ -92,42 +108,89 @@ export const ingestOpportunity = inngest.createFunction(
           entityType: "opportunity",
           entityId: opportunityId,
           payload: {
-            reason: "BROWSERBASE_API_KEY not configured",
-            textLength: extracted.text.length,
+            reason: "BROWSERBASE_API_KEY or BROWSERBASE_PROJECT_ID not configured",
+            directTextLength: directResult.text.length,
           },
         });
-        return false;
+        return { used: false, ...directResult };
       }
 
-      // TODO(p4-browser): implement Browserbase session, navigate, extract
-      return false;
+      // Run browser fallback
+      let fallback;
+      try {
+        fallback = await browserbaseFetch(directResult.sourceUrl);
+      } catch (err) {
+        // Browser fallback failure is non-fatal — we continue with direct result
+        const message = err instanceof Error ? err.message : String(err);
+        await recordActivity({
+          workspaceId,
+          kind: "opportunity.browser_fallback_failed",
+          entityType: "opportunity",
+          entityId: opportunityId,
+          payload: { error: message, directTextLength: directResult.text.length },
+        });
+        return { used: false, ...directResult };
+      }
+
+      // Persist browser-rendered HTML artifact
+      const rawHtmlBlobUrl = await persistRawHtmlArtifact(
+        opportunityId,
+        fallback.rawHtml,
+        "browser",
+      );
+
+      await recordActivity({
+        workspaceId,
+        kind: "opportunity.browser_fallback_used",
+        entityType: "opportunity",
+        entityId: opportunityId,
+        payload: {
+          sessionId: fallback.sessionId,
+          textLength: fallback.text.length,
+          isInsufficient: fallback.isInsufficient,
+        },
+      });
+
+      return {
+        used: true,
+        text: fallback.text,
+        title: fallback.title ?? directResult.title,
+        description: fallback.description ?? directResult.description,
+        isInsufficient: fallback.isInsufficient,
+        sourceUrl: directResult.sourceUrl,
+        rawHtmlBlobUrl: rawHtmlBlobUrl ?? directResult.rawHtmlBlobUrl,
+        sessionId: fallback.sessionId,
+      };
     });
 
-    // ── Step 4: Persist result ───────────────────────────────────────────
+    // ── Step 4: Persist structured result ───────────────────────────────
     await step.run("persist-result", async () => {
       const db = getDb();
+
+      // Build normalized fields from whichever result we ended up with
       const normalizedFields = extractNormalizedFields(
         {
-          rawHtml: extracted.rawHtml,
-          text: extracted.text,
-          title: extracted.title,
-          description: extracted.description,
-          isInsufficient: extracted.isInsufficient,
+          rawHtml: "",              // rawHtml already stored in blob; not needed here
+          text: browserResult.text,
+          title: browserResult.title,
+          description: browserResult.description,
+          isInsufficient: browserResult.isInsufficient,
           statusCode: 200,
         },
-        extracted.sourceUrl,
+        browserResult.sourceUrl,
       );
 
       await db
         .update(opportunities)
         .set({
           ingestStatus: "completed",
-          rawContent: extracted.text,
+          rawContent: browserResult.text,
           normalizedFields,
           extractionMeta: {
-            textLength: extracted.text.length,
-            isInsufficient: extracted.isInsufficient,
-            usedBrowserFallback,
+            textLength: browserResult.text.length,
+            isInsufficient: browserResult.isInsufficient,
+            usedBrowserFallback: browserResult.used,
+            rawHtmlBlobUrl: browserResult.rawHtmlBlobUrl ?? null,
             attempt,
             ingestedAt: new Date().toISOString(),
           },
@@ -145,21 +208,26 @@ export const ingestOpportunity = inngest.createFunction(
         entityType: "opportunity",
         entityId: opportunityId,
         payload: {
-          textLength: extracted.text.length,
-          isInsufficient: extracted.isInsufficient,
-          usedBrowserFallback,
+          textLength: browserResult.text.length,
+          isInsufficient: browserResult.isInsufficient,
+          usedBrowserFallback: browserResult.used,
           attempt,
         },
       });
     });
 
-    return { opportunityId, textLength: extracted.text.length };
+    return {
+      opportunityId,
+      textLength: browserResult.text.length,
+      usedBrowserFallback: browserResult.used,
+    };
   },
 );
 
-/**
- * Failure hook — marks the opportunity as failed and records an activity.
- */
+// ---------------------------------------------------------------------------
+// Failure hook — fires when all retries are exhausted
+// ---------------------------------------------------------------------------
+
 export const onIngestFailure = inngest.createFunction(
   {
     id: "on-ingest-opportunity-failure",
@@ -171,12 +239,12 @@ export const onIngestFailure = inngest.createFunction(
       name: string;
       data: OpportunityIngestData;
     };
-    if (original.name !== "email-gen/opportunity.ingest") return;
+    if (original.name !== OPPORTUNITY_INGEST_EVENT) return;
 
     const { opportunityId, workspaceId } = original.data;
     const errorMessage =
-      ((event.data as Record<string, unknown>).error as { message?: string })?.message ??
-      "Unknown error";
+      ((event.data as Record<string, unknown>).error as { message?: string })
+        ?.message ?? "Unknown error";
 
     await step.run("mark-failed", async () => {
       const db = getDb();
