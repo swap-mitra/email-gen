@@ -245,20 +245,19 @@ a {
 }
 
 .hero-headline {
-  font-size: clamp(2.8rem, 8vw, 7.5rem);
-  line-height: 1.1;
-  max-width: 14ch;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 1.15;
+  max-width: 18ch;
   margin-bottom: 32px;
 }
 
 .hero-headline em {
   font-style: normal;
   background: var(--yellow);
-  /* Render a complete box on every wrapped line */
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  padding: 0 8px;
-  margin: 0 -2px;
+  padding: 0.05em 0.2em;
+  margin: 0;
 }
 
 .hero-body {
@@ -283,6 +282,15 @@ a {
   border-top: var(--rule-heavy);
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+.spec-strip--single {
+  grid-template-columns: 1fr;
+}
+
+.spec-strip--single .spec-col {
+  border-right: none;
+  max-width: 640px;
 }
 
 .spec-col {
@@ -672,7 +680,7 @@ a {
   }
 
   .hero-headline {
-    font-size: clamp(2rem, 10vw, 3.2rem);
-    line-height: 1.12;
+    font-size: clamp(1.6rem, 8vw, 2.6rem);
+    line-height: 1.15;
   }
 }

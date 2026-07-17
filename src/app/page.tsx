@@ -8,12 +8,6 @@ const capabilities = [
   "Full audit trail — every action tied to source, knowledge, and reviewer",
 ];
 
-const foundation = [
-  "Clerk-backed authentication and organization isolation",
-  "Postgres tenancy schema with Drizzle ORM migrations",
-  "Typed API contracts shared between handlers and UI",
-  "Activity log for auditable workflow events",
-];
 
 export default async function Home() {
   const { userId } = await auth();
@@ -71,22 +65,12 @@ export default async function Home() {
         </section>
 
         {/* ── Two-column spec strip ────────────────────────────────── */}
-        <div className="spec-strip">
+        <div className="spec-strip spec-strip--single">
           <div className="spec-col">
             <p className="spec-col-label">What it does</p>
             <h2>The workflow</h2>
             <ul className="spec-list">
               {capabilities.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="spec-col">
-            <p className="spec-col-label">Under the hood</p>
-            <h2>The foundation</h2>
-            <ul className="spec-list">
-              {foundation.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
