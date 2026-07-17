@@ -4,12 +4,6 @@ import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-const sprintItems = [
-  "Protected dashboard routes via Clerk middleware",
-  "Workspace bootstrap and membership sync against Clerk organization context",
-  "Full domain model schema — opportunities, drafts, knowledge items, approvals",
-  "9 typed API endpoints with Zod contracts and activity logging",
-];
 
 export default async function DashboardPage() {
   const context = await getActiveWorkspaceContext();
@@ -60,24 +54,24 @@ export default async function DashboardPage() {
       {/* ── Main grid ─────────────────────────────────────────────── */}
       <div className="dash-grid">
 
-        {/* Sprint milestones */}
+        {/* Quick-start */}
         <div className="dash-block">
-          <h2>Sprint milestones</h2>
+          <h2>Get started</h2>
           <ul className="feature-list">
-            {sprintItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
+            <li>Submit a job or company URL to create your first opportunity</li>
+            <li>Ground the message in your team&apos;s proof points and knowledge</li>
+            <li>Review and approve drafts before they go out</li>
+            <li>Track every action in the activity log below</li>
           </ul>
         </div>
 
-        {/* Next up */}
+        {/* Workspace info */}
         <div className="dash-block">
-          <h2>Next up</h2>
+          <h2>Workspace</h2>
           <ul className="feature-list">
-            <li>Inngest async workflow — ingest-opportunity + generate-draft jobs</li>
-            <li>Ingestion pipeline — URL fetch, HTML extract, Playwright fallback</li>
-            <li>AI retrieval — hybrid pgvector search + grounded generation</li>
-            <li>UI pages — opportunity detail, draft editor, approval queue</li>
+            <li>Isolated tenant — all data scoped to your organization</li>
+            <li>Role-based access — invite teammates and assign reviewers</li>
+            <li>Full audit trail tied to every draft and approval</li>
           </ul>
         </div>
 

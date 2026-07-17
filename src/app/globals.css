@@ -1,29 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap");
 
 /* ---------------------------------------------------------------------------
    Token system — Email GenAI / Editorial Brutalism
    --------------------------------------------------------------------------- */
 :root {
-  --ink:        #0A0A0A;
-  --ground:     #F7F5F0;
-  --white:      #FFFFFF;
-  --yellow:     #F5E642;
-  --yellow-dim: #EDD800;
-  --rule:       2px solid #0A0A0A;
-  --rule-heavy: 4px solid #0A0A0A;
-  --rule-xl:    8px solid #0A0A0A;
-  --muted:      #5A5A54;
-  --border:     1px solid #0A0A0A;
+  --ink: #0a0a0a;
+  --ground: #f7f5f0;
+  --white: #ffffff;
+  --yellow: #f5e642;
+  --yellow-dim: #edd800;
+  --rule: 2px solid #0a0a0a;
+  --rule-heavy: 4px solid #0a0a0a;
+  --rule-xl: 8px solid #0a0a0a;
+  --muted: #5a5a54;
+  --border: 1px solid #0a0a0a;
 
   --font-display: "Syne", sans-serif;
-  --font-body:    "Inter", sans-serif;
-  --font-mono:    "Space Mono", monospace;
+  --font-hero:    "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "Space Mono", monospace;
 }
 
 /* ---------------------------------------------------------------------------
    Reset
    --------------------------------------------------------------------------- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -117,10 +120,10 @@ a {
 }
 
 .brand {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-family: var(--font-hero);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -185,7 +188,9 @@ a {
   padding: 12px 24px;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 80ms, box-shadow 80ms;
+  transition:
+    transform 80ms,
+    box-shadow 80ms;
   position: relative;
 }
 
@@ -245,9 +250,11 @@ a {
 }
 
 .hero-headline {
-  font-size: clamp(2rem, 5vw, 4.5rem);
-  line-height: 1.15;
-  max-width: 18ch;
+  font-family: var(--font-hero);
+  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1.35;
+  max-width: 22ch;
   margin-bottom: 32px;
 }
 
@@ -256,8 +263,9 @@ a {
   background: var(--yellow);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  padding: 0.05em 0.2em;
+  padding: 0.05em 0.25em;
   margin: 0;
+  white-space: nowrap;
 }
 
 .hero-body {
@@ -347,7 +355,7 @@ a {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid rgba(10,10,10,0.1);
+  border-top: 1px solid rgba(10, 10, 10, 0.1);
   font-size: 0.93rem;
   line-height: 1.5;
   color: var(--muted);
@@ -459,7 +467,7 @@ a {
   border-right: none;
 }
 
-.dash-block:nth-last-child(-n+2) {
+.dash-block:nth-last-child(-n + 2) {
   border-bottom: none;
 }
 
@@ -499,7 +507,7 @@ a {
   align-items: baseline;
   gap: 8px 16px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(10,10,10,0.1);
+  border-bottom: 1px solid rgba(10, 10, 10, 0.1);
 }
 
 .activity-feed li:last-child {
@@ -552,7 +560,7 @@ a {
   align-items: flex-start;
   gap: 10px;
   padding: 9px 0;
-  border-bottom: 1px solid rgba(10,10,10,0.1);
+  border-bottom: 1px solid rgba(10, 10, 10, 0.1);
   font-size: 0.88rem;
   line-height: 1.5;
   color: var(--muted);
@@ -635,7 +643,7 @@ a {
     border-right: none;
   }
 
-  .dash-block:nth-last-child(-n+2) {
+  .dash-block:nth-last-child(-n + 2) {
     border-bottom: var(--rule-heavy);
   }
 
@@ -680,7 +688,7 @@ a {
   }
 
   .hero-headline {
-    font-size: clamp(1.6rem, 8vw, 2.6rem);
-    line-height: 1.15;
+    font-size: clamp(1.5rem, 6vw, 2.2rem);
+    line-height: 1.2;
   }
 }
