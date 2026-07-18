@@ -1,6 +1,7 @@
 import { CreateOrganization } from "@clerk/nextjs";
 import { listRecentActivities } from "@/lib/activity";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { OpportunityWorkflow } from "./opportunity-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,12 @@ export default async function DashboardPage() {
             <li>Role-based access — invite teammates and assign reviewers</li>
             <li>Full audit trail tied to every draft and approval</li>
           </ul>
+        </div>
+
+        {/* New opportunity — full width */}
+        <div className="dash-block-full">
+          <h2>New opportunity</h2>
+          <OpportunityWorkflow />
         </div>
 
         {/* Activity log — full width */}

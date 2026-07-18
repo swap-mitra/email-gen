@@ -613,6 +613,124 @@ a {
 }
 
 /* ---------------------------------------------------------------------------
+   Opportunity workflow (dashboard — submit URL → ingest → generate → approve)
+   --------------------------------------------------------------------------- */
+.opp-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.opp-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.opp-form input[type="url"] {
+  flex: 1;
+  min-width: 260px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 12px 14px;
+  border: var(--rule);
+  background: var(--white);
+  color: var(--ink);
+}
+
+.opp-form input[type="url"]:focus {
+  outline: 2px solid var(--yellow-dim);
+  outline-offset: -2px;
+}
+
+.opp-form input[type="url"]::placeholder {
+  color: var(--muted);
+}
+
+.opp-form input[type="url"]:disabled {
+  opacity: 0.6;
+}
+
+.opp-status {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.opp-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.opp-status-url {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.opp-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: var(--border);
+  background: var(--white);
+  color: var(--muted);
+}
+
+.opp-badge-completed {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.opp-badge-failed {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.opp-error {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #b3261e;
+}
+
+.opp-draft {
+  border: var(--rule);
+  padding: 20px;
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.opp-draft-subject {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.opp-draft-body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+
+.opp-draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.opp-reset {
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------------------------
    Responsive
    --------------------------------------------------------------------------- */
 @media (max-width: 768px) {
