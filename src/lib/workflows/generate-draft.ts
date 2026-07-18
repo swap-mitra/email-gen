@@ -6,7 +6,7 @@ import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { retrieveKnowledgeForOpportunity } from "@/lib/ai/retrieval";
 import { generateDraftEmail } from "@/lib/ai/generation";
-import { isOpenAiConfigured } from "@/lib/ai/openai-client";
+import { isAnthropicConfigured } from "@/lib/ai/anthropic-client";
 
 function buildRetrievalQuery(normalizedFields: Record<string, unknown> | null): string {
   if (!normalizedFields) return "";
@@ -91,14 +91,14 @@ export const generateDraft = inngest.createFunction(
     });
 
     // ── Step 3: Generate content ──────────────────────────────────────────
-    //    Grounded generation via gpt-4o using normalized opportunity data
+    //    Grounded generation via Claude Opus 4.8 using normalized opportunity data
     //    plus the retrieved knowledge items.
     const generated = await step.run("generate-content", async () => {
-      if (!isOpenAiConfigured()) {
+      if (!isAnthropicConfigured()) {
         // Draft generation has no non-AI fallback — fail fast rather than
         // burning retries on a permanent configuration problem.
         throw new NonRetriableError(
-          "OPENAI_API_KEY must be set to generate drafts.",
+          "ANTHROPIC_API_KEY must be set to generate drafts.",
         );
       }
 

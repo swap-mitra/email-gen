@@ -4,8 +4,7 @@ import { inngest, KNOWLEDGE_ITEM_EMBED_EVENT, type KnowledgeItemEmbedData } from
 import { knowledgeItems } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
-import { embedText } from "@/lib/ai/embeddings";
-import { isOpenAiConfigured } from "@/lib/ai/openai-client";
+import { embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
 
 // ---------------------------------------------------------------------------
 // embed-knowledge-item — P5 embedding step function
@@ -31,14 +30,14 @@ export const embedKnowledgeItem = inngest.createFunction(
     //    enhancement, not a hard requirement — mirrors the Browserbase
     //    fallback's "skip, don't fail" behavior when unconfigured.
     const skipped = await step.run("check-configured", async () => {
-      if (isOpenAiConfigured()) return false;
+      if (isEmbeddingConfigured()) return false;
 
       await recordActivity({
         workspaceId,
         kind: "knowledge_item.embedding_skipped",
         entityType: "knowledge_item",
         entityId: knowledgeItemId,
-        payload: { reason: "OPENAI_API_KEY not configured" },
+        payload: { reason: "GEMINI_API_KEY not configured" },
       });
       return true;
     });
@@ -59,7 +58,7 @@ export const embedKnowledgeItem = inngest.createFunction(
         throw new NonRetriableError(`Knowledge item ${knowledgeItemId} not found.`);
       }
 
-      const vector = await embedText(`${item.title}\n\n${item.content}`);
+      const vector = await embedDocumentText(`${item.title}\n\n${item.content}`);
 
       await db
         .update(knowledgeItems)

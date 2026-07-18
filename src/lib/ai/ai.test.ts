@@ -2,43 +2,65 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { reciprocalRankFusion, maximalMarginalRelevance } from "@/lib/ai/retrieval";
 import { toNormalizedFields, aiExtractedFieldsSchema } from "@/lib/ai/extraction";
 import { generatedDraftSchema, generateDraftEmail } from "@/lib/ai/generation";
-import { embedText } from "@/lib/ai/embeddings";
-import { chatJSON, embedBatch, isOpenAiConfigured } from "@/lib/ai/openai-client";
+import { embedQueryText, embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
+import { messagesParse, isAnthropicConfigured } from "@/lib/ai/anthropic-client";
 import type { FetchedContent } from "@/lib/ingestion/fetch-content";
 
 // ---------------------------------------------------------------------------
-// openai-client.ts — configuration guard
+// anthropic-client.ts — configuration guard
 // ---------------------------------------------------------------------------
 
-describe("P5 AI — openai-client configuration guard", () => {
+describe("P5 AI — anthropic-client configuration guard", () => {
   beforeEach(() => {
-    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
   });
 
-  it("reports unconfigured when OPENAI_API_KEY is not set", () => {
-    expect(isOpenAiConfigured()).toBe(false);
+  it("reports unconfigured when ANTHROPIC_API_KEY is not set", () => {
+    expect(isAnthropicConfigured()).toBe(false);
   });
 
-  it("reports configured when OPENAI_API_KEY is set", () => {
-    process.env.OPENAI_API_KEY = "sk-test";
-    expect(isOpenAiConfigured()).toBe(true);
+  it("reports configured when ANTHROPIC_API_KEY is set", () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    expect(isAnthropicConfigured()).toBe(true);
   });
 
-  it("chatJSON throws a descriptive error when unconfigured", async () => {
+  it("messagesParse throws a descriptive error when unconfigured", async () => {
     await expect(
-      chatJSON({
-        model: "gpt-4o-mini",
+      messagesParse({
+        model: "claude-haiku-4-5",
         system: "system",
         user: "user",
-        schemaName: "test",
-        schema: {},
+        schema: generatedDraftSchema,
       }),
-    ).rejects.toThrow("OPENAI_API_KEY must be set");
+    ).rejects.toThrow("ANTHROPIC_API_KEY must be set");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// embeddings.ts — configuration guard (Gemini)
+// ---------------------------------------------------------------------------
+
+describe("P5 AI — embeddings configuration guard", () => {
+  beforeEach(() => {
+    delete process.env.GEMINI_API_KEY;
   });
 
-  it("embedBatch throws a descriptive error when unconfigured", async () => {
-    await expect(embedBatch(["hello"], "text-embedding-3-small")).rejects.toThrow(
-      "OPENAI_API_KEY must be set",
+  it("reports unconfigured when GEMINI_API_KEY is not set", () => {
+    expect(isEmbeddingConfigured()).toBe(false);
+  });
+
+  it("reports configured when GEMINI_API_KEY is set", () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    expect(isEmbeddingConfigured()).toBe(true);
+  });
+
+  it("embedQueryText throws a descriptive error when unconfigured", async () => {
+    await expect(embedQueryText("some query")).rejects.toThrow("GEMINI_API_KEY must be set");
+  });
+
+  it("embedDocumentText throws a descriptive error when unconfigured", async () => {
+    await expect(embedDocumentText("some knowledge content")).rejects.toThrow(
+      "GEMINI_API_KEY must be set",
     );
   });
 });
@@ -191,7 +213,7 @@ describe("P5 AI — toNormalizedFields", () => {
 
 describe("P5 AI — generateDraftEmail", () => {
   beforeEach(() => {
-    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
   });
 
   it("validates well-formed output against generatedDraftSchema", () => {
@@ -202,28 +224,12 @@ describe("P5 AI — generateDraftEmail", () => {
     expect(result.subject).toContain("Quick question");
   });
 
-  it("throws when OPENAI_API_KEY is not configured", async () => {
+  it("throws when ANTHROPIC_API_KEY is not configured", async () => {
     await expect(
       generateDraftEmail({
         opportunity: { sourceUrl: "https://example.com", normalizedFields: null },
         knowledgeItems: [],
       }),
-    ).rejects.toThrow("OPENAI_API_KEY must be set");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// embeddings.ts — configuration guard
-// ---------------------------------------------------------------------------
-
-describe("P5 AI — embedText", () => {
-  beforeEach(() => {
-    delete process.env.OPENAI_API_KEY;
-  });
-
-  it("throws when OPENAI_API_KEY is not configured", async () => {
-    await expect(embedText("some knowledge content")).rejects.toThrow(
-      "OPENAI_API_KEY must be set",
-    );
+    ).rejects.toThrow("ANTHROPIC_API_KEY must be set");
   });
 });

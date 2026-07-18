@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { chatJSON } from "@/lib/ai/openai-client";
+import { messagesParse } from "@/lib/ai/anthropic-client";
 import type { KnowledgeItem, Opportunity } from "@/db/schema";
 
-export const GENERATION_MODEL = "gpt-4o";
+export const GENERATION_MODEL = "claude-opus-4-8";
 
 export const generatedDraftSchema = z.object({
   subject: z.string(),
@@ -11,16 +11,6 @@ export const generatedDraftSchema = z.object({
 
 export type GeneratedDraft = z.infer<typeof generatedDraftSchema>;
 
-const GENERATED_DRAFT_JSON_SCHEMA = {
-  type: "object",
-  properties: {
-    subject: { type: "string" },
-    body: { type: "string" },
-  },
-  required: ["subject", "body"],
-  additionalProperties: false,
-} as const;
-
 const SYSTEM_PROMPT = `You write concise, grounded outbound emails for sales/business development outreach.
 Only reference facts present in the opportunity data or the provided knowledge evidence — never invent claims about the company or product.
 If no knowledge evidence is provided, write a shorter, more general email and do not fabricate specifics.
@@ -28,8 +18,8 @@ Keep the tone professional, warm, and specific to the opportunity. Avoid generic
 
 /**
  * Grounded generation: combines normalized opportunity data with retrieved
- * knowledge items to produce a subject + body via gpt-4o.
- * Throws if OPENAI_API_KEY is not configured — draft generation requires AI.
+ * knowledge items to produce a subject + body via Claude Opus 4.8.
+ * Throws if ANTHROPIC_API_KEY is not configured — draft generation requires AI.
  */
 export async function generateDraftEmail(args: {
   opportunity: Pick<Opportunity, "sourceUrl" | "normalizedFields">;
@@ -58,14 +48,11 @@ export async function generateDraftEmail(args: {
     "Write a subject line and email body for this outreach.",
   ].join("\n");
 
-  const raw = await chatJSON({
+  return messagesParse({
     model: GENERATION_MODEL,
     system: SYSTEM_PROMPT,
     user: userPrompt,
-    schemaName: "generated_draft_email",
-    schema: GENERATED_DRAFT_JSON_SCHEMA,
-    temperature: 0.5,
+    schema: generatedDraftSchema,
+    maxTokens: 4096,
   });
-
-  return generatedDraftSchema.parse(raw);
 }

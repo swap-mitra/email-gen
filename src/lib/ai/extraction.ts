@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { chatJSON } from "@/lib/ai/openai-client";
+import { messagesParse } from "@/lib/ai/anthropic-client";
 import type { FetchedContent } from "@/lib/ingestion/fetch-content";
 
-export const EXTRACTION_MODEL = "gpt-4o-mini";
+export const EXTRACTION_MODEL = "claude-haiku-4-5";
 
 // Text is truncated before being sent to the model — keeps token usage bounded
 // and predictable regardless of source page size.
@@ -24,40 +24,15 @@ export const aiExtractedFieldsSchema = z.object({
 
 export type AiExtractedFields = z.infer<typeof aiExtractedFieldsSchema>;
 
-// Plain JSON Schema mirror of `aiExtractedFieldsSchema` for OpenAI's
-// structured-output `response_format`. Kept hand-written and in sync since
-// this repo has no zod-to-json-schema dependency.
-const AI_EXTRACTED_FIELDS_JSON_SCHEMA = {
-  type: "object",
-  properties: {
-    title: { type: ["string", "null"] },
-    company: { type: ["string", "null"] },
-    location: { type: ["string", "null"] },
-    employmentType: { type: ["string", "null"] },
-    summary: { type: ["string", "null"] },
-    keyRequirements: { type: "array", items: { type: "string" } },
-    contactEmail: { type: ["string", "null"] },
-  },
-  required: [
-    "title",
-    "company",
-    "location",
-    "employmentType",
-    "summary",
-    "keyRequirements",
-    "contactEmail",
-  ],
-  additionalProperties: false,
-} as const;
-
 const SYSTEM_PROMPT = `You extract structured opportunity data from a job posting or company career page.
 Only use information present in the provided text — never invent details.
 Use null for any field that is not present in the text.`;
 
 /**
- * Schema-constrained extraction of normalized opportunity fields via gpt-4o-mini.
- * Throws if OPENAI_API_KEY is not configured or the model output fails validation —
- * callers should fall back to the rule-based extractor from fetch-content.ts.
+ * Schema-constrained extraction of normalized opportunity fields via
+ * Claude Haiku 4.5. Throws if ANTHROPIC_API_KEY is not configured or the
+ * model output fails validation — callers should fall back to the
+ * rule-based extractor from fetch-content.ts.
  */
 export async function extractFieldsWithAI(
   content: FetchedContent,
@@ -72,16 +47,13 @@ export async function extractFieldsWithAI(
     content.text.slice(0, MAX_INPUT_CHARS),
   ].join("\n");
 
-  const raw = await chatJSON({
+  return messagesParse({
     model: EXTRACTION_MODEL,
     system: SYSTEM_PROMPT,
     user: userPrompt,
-    schemaName: "extracted_opportunity_fields",
-    schema: AI_EXTRACTED_FIELDS_JSON_SCHEMA,
-    temperature: 0,
+    schema: aiExtractedFieldsSchema,
+    maxTokens: 2048,
   });
-
-  return aiExtractedFieldsSchema.parse(raw);
 }
 
 /**

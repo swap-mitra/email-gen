@@ -1,8 +1,7 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { knowledgeItems, type KnowledgeItem } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { embedText } from "@/lib/ai/embeddings";
-import { isOpenAiConfigured } from "@/lib/ai/openai-client";
+import { embedQueryText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
 
 const RRF_K = 60;
 const LEXICAL_LIMIT = 20;
@@ -123,9 +122,9 @@ export async function retrieveKnowledgeForOpportunity(args: {
   // ── Vector search (pgvector cosine distance) — skipped gracefully when
   //    AI is not configured or embedding the query fails. ─────────────────
   let vectorIds: string[] = [];
-  if (isOpenAiConfigured()) {
+  if (isEmbeddingConfigured()) {
     try {
-      const queryEmbedding = await embedText(queryText);
+      const queryEmbedding = await embedQueryText(queryText);
       const vectorLiteral = `[${queryEmbedding.join(",")}]`;
       const vectorRows = await db
         .select({ id: knowledgeItems.id })

@@ -177,7 +177,7 @@ export const ingestOpportunity = inngest.createFunction(
         statusCode: 200,
       };
 
-      // Prefer schema-constrained AI extraction (gpt-4o-mini); fall back to
+      // Prefer schema-constrained AI extraction (Claude Haiku 4.5); fall back to
       // the rule-based extractor when AI is unconfigured or extraction fails.
       // Non-fatal — ingestion still succeeds either way.
       let normalizedFields: Record<string, unknown>;

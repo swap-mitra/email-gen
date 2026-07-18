@@ -101,7 +101,7 @@ export const knowledgeItems = pgTable("knowledge_items", {
 
   /**
    * Embedding stored as a real[] array.
-   * Dimensionality: 1536 (text-embedding-3-small).
+   * Dimensionality: 1536 (gemini-embedding-001, truncated via outputDimensionality).
    * Cast to vector in raw SQL for pgvector operations.
    */
   embedding: real("embedding").array(),
