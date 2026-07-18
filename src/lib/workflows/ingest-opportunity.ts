@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { fetchAndExtractContent, extractNormalizedFields } from "@/lib/ingestion/fetch-content";
 import { browserbaseFetch } from "@/lib/ingestion/browser-fallback";
 import { persistRawHtmlArtifact } from "@/lib/ingestion/persist-artifact";
+import { extractFieldsWithAI, toNormalizedFields } from "@/lib/ai/extraction";
 
 // ---------------------------------------------------------------------------
 // ingest-opportunity — full P3+P4 durable step function
@@ -167,18 +168,34 @@ export const ingestOpportunity = inngest.createFunction(
     await step.run("persist-result", async () => {
       const db = getDb();
 
-      // Build normalized fields from whichever result we ended up with
-      const normalizedFields = extractNormalizedFields(
-        {
-          rawHtml: "",              // rawHtml already stored in blob; not needed here
-          text: browserResult.text,
-          title: browserResult.title,
-          description: browserResult.description,
-          isInsufficient: browserResult.isInsufficient,
-          statusCode: 200,
-        },
-        browserResult.sourceUrl,
-      );
+      const fetchedContent = {
+        rawHtml: "",              // rawHtml already stored in blob; not needed here
+        text: browserResult.text,
+        title: browserResult.title,
+        description: browserResult.description,
+        isInsufficient: browserResult.isInsufficient,
+        statusCode: 200,
+      };
+
+      // Prefer schema-constrained AI extraction (gpt-4o-mini); fall back to
+      // the rule-based extractor when AI is unconfigured or extraction fails.
+      // Non-fatal — ingestion still succeeds either way.
+      let normalizedFields: Record<string, unknown>;
+      let usedAiExtraction = true;
+      try {
+        const aiFields = await extractFieldsWithAI(fetchedContent, browserResult.sourceUrl);
+        normalizedFields = toNormalizedFields(aiFields, fetchedContent, browserResult.sourceUrl);
+      } catch (err) {
+        usedAiExtraction = false;
+        normalizedFields = extractNormalizedFields(fetchedContent, browserResult.sourceUrl);
+        await recordActivity({
+          workspaceId,
+          kind: "opportunity.ai_extraction_skipped",
+          entityType: "opportunity",
+          entityId: opportunityId,
+          payload: { reason: err instanceof Error ? err.message : String(err) },
+        });
+      }
 
       await db
         .update(opportunities)
@@ -190,6 +207,7 @@ export const ingestOpportunity = inngest.createFunction(
             textLength: browserResult.text.length,
             isInsufficient: browserResult.isInsufficient,
             usedBrowserFallback: browserResult.used,
+            usedAiExtraction,
             rawHtmlBlobUrl: browserResult.rawHtmlBlobUrl ?? null,
             attempt,
             ingestedAt: new Date().toISOString(),

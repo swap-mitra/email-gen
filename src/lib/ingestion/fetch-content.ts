@@ -101,7 +101,8 @@ export async function fetchAndExtractContent(url: string): Promise<FetchedConten
 /**
  * Rule-based field extraction from fetched content.
  * Returns a best-effort normalized fields object.
- * TODO(p5): replace with gpt-4o-mini schema-constrained extraction.
+ * Used as the fallback when AI extraction (@/lib/ai/extraction) is
+ * unconfigured or fails — see ingest-opportunity.ts.
  */
 export function extractNormalizedFields(
   content: FetchedContent,
@@ -124,6 +125,6 @@ export function extractNormalizedFields(
     extractedAt: new Date().toISOString(),
     // Truncated excerpt — full text stored separately as rawContent
     excerpt: content.text.slice(0, 800) || null,
-    aiExtracted: false, // will flip to true in P5
+    aiExtracted: false,
   };
 }

@@ -2,6 +2,10 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest";
 import { ingestOpportunity, onIngestFailure } from "@/lib/workflows/ingest-opportunity";
 import { generateDraft, onGenerateDraftFailure } from "@/lib/workflows/generate-draft";
+import {
+  embedKnowledgeItem,
+  onEmbedKnowledgeItemFailure,
+} from "@/lib/workflows/embed-knowledge-item";
 
 /**
  * Inngest webhook handler.
@@ -18,5 +22,7 @@ export const { GET, POST, PUT } = serve({
     onIngestFailure,
     generateDraft,
     onGenerateDraftFailure,
+    embedKnowledgeItem,
+    onEmbedKnowledgeItemFailure,
   ],
 });
