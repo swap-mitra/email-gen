@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { inngest, OPPORTUNITY_INGEST_EVENT, DRAFT_GENERATE_EVENT } from "@/lib/inngest";
+import {
+  inngest,
+  OPPORTUNITY_INGEST_EVENT,
+  DRAFT_GENERATE_EVENT,
+  KNOWLEDGE_ITEM_EMBED_EVENT,
+} from "@/lib/inngest";
 import { ingestOpportunity, onIngestFailure } from "@/lib/workflows/ingest-opportunity";
 import { generateDraft, onGenerateDraftFailure } from "@/lib/workflows/generate-draft";
+import {
+  embedKnowledgeItem,
+  onEmbedKnowledgeItemFailure,
+} from "@/lib/workflows/embed-knowledge-item";
 
 describe("P3 Async Workflows (Inngest)", () => {
   it("defines the correct event constants", () => {
@@ -34,5 +43,24 @@ describe("P3 Async Workflows (Inngest)", () => {
   it("registers failure hooks for both functions", () => {
     expect(onIngestFailure.opts.id).toBe("on-ingest-opportunity-failure");
     expect(onGenerateDraftFailure.opts.id).toBe("on-generate-draft-failure");
+  });
+});
+
+describe("P5 AI + Retrieval — embed-knowledge-item workflow", () => {
+  it("defines the correct event constant", () => {
+    expect(KNOWLEDGE_ITEM_EMBED_EVENT).toBe("email-gen/knowledge-item.embed");
+  });
+
+  it("registers embedKnowledgeItem function with correct triggers & options", () => {
+    expect(embedKnowledgeItem.opts.id).toBe("embed-knowledge-item");
+    expect(embedKnowledgeItem.opts.retries).toBe(3);
+    expect(embedKnowledgeItem.opts.concurrency).toEqual({
+      limit: 1,
+      key: "event.data.knowledgeItemId",
+    });
+  });
+
+  it("registers a failure hook", () => {
+    expect(onEmbedKnowledgeItemFailure.opts.id).toBe("on-embed-knowledge-item-failure");
   });
 });

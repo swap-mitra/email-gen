@@ -1,9 +1,23 @@
 import { NonRetriableError } from "inngest";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { inngest, DRAFT_GENERATE_EVENT, type DraftGenerateData } from "@/lib/inngest";
-import { drafts } from "@/db/schema";
+import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { retrieveKnowledgeForOpportunity } from "@/lib/ai/retrieval";
+import { generateDraftEmail } from "@/lib/ai/generation";
+import { isOpenAiConfigured } from "@/lib/ai/openai-client";
+
+function buildRetrievalQuery(normalizedFields: Record<string, unknown> | null): string {
+  if (!normalizedFields) return "";
+  const parts = [
+    normalizedFields.title,
+    normalizedFields.company,
+    normalizedFields.description,
+    normalizedFields.summary,
+  ].filter((v): v is string => typeof v === "string" && v.length > 0);
+  return parts.join(" ");
+}
 
 export const generateDraft = inngest.createFunction(
   {
@@ -20,7 +34,7 @@ export const generateDraft = inngest.createFunction(
     const { draftId, workspaceId, opportunityId } = event.data as DraftGenerateData;
 
     // ── Step 1: Mark as running ──────────────────────────────────────────
-    await step.run("mark-running", async () => {
+    const opportunity = await step.run("mark-running", async () => {
       const db = getDb();
 
       const draft = await db.query.drafts.findFirst({
@@ -29,6 +43,14 @@ export const generateDraft = inngest.createFunction(
 
       if (!draft) {
         throw new NonRetriableError(`Draft ${draftId} not found.`);
+      }
+
+      const opp = await db.query.opportunities.findFirst({
+        where: eq(opportunities.id, opportunityId),
+      });
+
+      if (!opp) {
+        throw new NonRetriableError(`Opportunity ${opportunityId} not found.`);
       }
 
       await db
@@ -43,64 +65,100 @@ export const generateDraft = inngest.createFunction(
         entityId: draftId,
         payload: { opportunityId },
       });
-    });
 
-    // ── Step 2: Retrieve knowledge (TODO p5) ─────────────────────────────
-    // Will perform hybrid retrieval:
-    //   - metadata filter by workspaceId
-    //   - lexical search over knowledge_items.content
-    //   - vector cosine similarity using pgvector
-    //   - reciprocal rank fusion + maximal marginal relevance reranking
-    const retrievedItems = await step.run("retrieve-knowledge", async () => {
-      // TODO(p5): implement hybrid retrieval against knowledge_items
-      return { items: [] as string[], stub: true };
-    });
-
-    // ── Step 3: Generate content (TODO p5) ───────────────────────────────
-    // Will call OpenAI gpt-4o with:
-    //   - system prompt: brand voice from workspace knowledge
-    //   - user prompt: normalized opportunity fields
-    //   - grounding context: retrieved knowledge items
-    const generated = await step.run("generate-content", async () => {
-      // TODO(p5): call OpenAI gpt-4o with retrieved knowledge and opportunity
       return {
-        subject: null as string | null,
-        body: null as string | null,
-        groundingRefs: retrievedItems.items,
-        stub: true,
+        sourceUrl: opp.sourceUrl,
+        normalizedFields: opp.normalizedFields,
       };
     });
 
-    // ── Step 4: Persist draft version (TODO p5) ──────────────────────────
-    await step.run("persist-version", async () => {
-      if (generated.stub) {
-        // Leave in pending state until P5 so UI shows a clear "pending AI" status
-        const db = getDb();
-        await db
-          .update(drafts)
-          .set({ generationStatus: "pending", updatedAt: new Date() })
-          .where(eq(drafts.id, draftId));
-        return;
+    // ── Step 2: Retrieve knowledge ────────────────────────────────────────
+    //    Hybrid retrieval: metadata filter by workspaceId, lexical search
+    //    over knowledge_items.content, vector cosine similarity via
+    //    pgvector, fused with reciprocal rank fusion, and reranked with
+    //    maximal marginal relevance to reduce duplicate evidence.
+    const retrievedItems = await step.run("retrieve-knowledge", async () => {
+      const queryText = buildRetrievalQuery(
+        opportunity.normalizedFields as Record<string, unknown> | null,
+      );
+
+      const items = await retrieveKnowledgeForOpportunity({
+        workspaceId,
+        queryText,
+      });
+
+      return items.map((item) => ({ id: item.id, title: item.title, content: item.content }));
+    });
+
+    // ── Step 3: Generate content ──────────────────────────────────────────
+    //    Grounded generation via gpt-4o using normalized opportunity data
+    //    plus the retrieved knowledge items.
+    const generated = await step.run("generate-content", async () => {
+      if (!isOpenAiConfigured()) {
+        // Draft generation has no non-AI fallback — fail fast rather than
+        // burning retries on a permanent configuration problem.
+        throw new NonRetriableError(
+          "OPENAI_API_KEY must be set to generate drafts.",
+        );
       }
-      // TODO(p5): insert draft_version with subject, body, groundingRefs
+
+      const draftEmail = await generateDraftEmail({
+        opportunity: {
+          sourceUrl: opportunity.sourceUrl,
+          normalizedFields: opportunity.normalizedFields,
+        },
+        knowledgeItems: retrievedItems,
+      });
+
+      return {
+        subject: draftEmail.subject,
+        body: draftEmail.body,
+        groundingRefs: retrievedItems.map((item) => item.id),
+      };
+    });
+
+    // ── Step 4: Persist draft version ─────────────────────────────────────
+    await step.run("persist-version", async () => {
+      const db = getDb();
+
+      const [{ maxVersion }] = await db
+        .select({ maxVersion: max(draftVersions.versionNumber) })
+        .from(draftVersions)
+        .where(eq(draftVersions.draftId, draftId));
+
+      const nextVersion = (maxVersion ?? 0) + 1;
+
+      await db.insert(draftVersions).values({
+        draftId,
+        workspaceId,
+        versionNumber: nextVersion,
+        subject: generated.subject,
+        body: generated.body,
+        groundingRefs: generated.groundingRefs,
+        source: "ai_generated",
+      });
+
+      await db
+        .update(drafts)
+        .set({ state: "draft_generated", generationStatus: "completed", updatedAt: new Date() })
+        .where(eq(drafts.id, draftId));
     });
 
     // ── Step 5: Log completion ───────────────────────────────────────────
     await step.run("log-completion", async () => {
       await recordActivity({
         workspaceId,
-        kind: generated.stub ? "draft.generation_pending_ai" : "draft.generation_completed",
+        kind: "draft.generation_completed",
         entityType: "draft",
         entityId: draftId,
         payload: {
           opportunityId,
-          stub: generated.stub,
           groundingRefsCount: generated.groundingRefs.length,
         },
       });
     });
 
-    return { draftId, stub: generated.stub };
+    return { draftId, groundingRefsCount: generated.groundingRefs.length };
   },
 );
 

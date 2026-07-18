@@ -4,6 +4,7 @@ import { createKnowledgeItemRequestSchema, knowledgeItemSchema } from "@/lib/con
 import { knowledgeItems } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { inngest, KNOWLEDGE_ITEM_EMBED_EVENT } from "@/lib/inngest";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export async function POST(req: Request) {
@@ -51,7 +52,14 @@ export async function POST(req: Request) {
       payload: { title: data.title },
     });
 
-    // TODO(p5): dispatch embedding job via Inngest to populate item.embedding
+    await inngest.send({
+      id: `knowledge-item-embed-${item.id}`,
+      name: KNOWLEDGE_ITEM_EMBED_EVENT,
+      data: {
+        knowledgeItemId: item.id,
+        workspaceId: context.workspace.id,
+      },
+    });
 
     return NextResponse.json(knowledgeItemSchema.parse(item), { status: 201 });
   } catch (error) {

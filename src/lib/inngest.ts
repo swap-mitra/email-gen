@@ -2,6 +2,7 @@ import { Inngest } from "inngest";
 
 export const OPPORTUNITY_INGEST_EVENT = "email-gen/opportunity.ingest" as const;
 export const DRAFT_GENERATE_EVENT = "email-gen/draft.generate" as const;
+export const KNOWLEDGE_ITEM_EMBED_EVENT = "email-gen/knowledge-item.embed" as const;
 
 export const inngest = new Inngest({
   id: "email-gen",
@@ -20,4 +21,9 @@ export type DraftGenerateData = {
   draftId: string;
   workspaceId: string;
   opportunityId: string;
+};
+
+export type KnowledgeItemEmbedData = {
+  knowledgeItemId: string;
+  workspaceId: string;
 };
