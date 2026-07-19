@@ -1,12 +1,80 @@
 import { NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { createApiErrorResponse, parseBody } from "@/lib/api";
-import { createDraftRequestSchema, draftSchema } from "@/lib/contracts/api";
-import { drafts, opportunities } from "@/db/schema";
+import {
+  createDraftRequestSchema,
+  draftListResponseSchema,
+  draftSchema,
+} from "@/lib/contracts/api";
+import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest } from "@/lib/inngest";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
+
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 50;
+
+export async function GET(req: Request) {
+  try {
+    const context = await getActiveWorkspaceContext();
+
+    if (!context.userId) {
+      return createApiErrorResponse({
+        code: "unauthorized",
+        message: "Authentication is required.",
+        status: 401,
+      });
+    }
+
+    if (!context.workspace) {
+      return createApiErrorResponse({
+        code: "forbidden",
+        message: "An active workspace is required.",
+        status: 403,
+      });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const rawLimit = Number(searchParams.get("limit") ?? DEFAULT_LIMIT);
+    const limit = Number.isFinite(rawLimit)
+      ? Math.min(Math.max(1, rawLimit), MAX_LIMIT)
+      : DEFAULT_LIMIT;
+    const state = searchParams.get("state");
+    const opportunityId = searchParams.get("opportunityId");
+
+    const db = getDb();
+    const rows = await db.query.drafts.findMany({
+      where: and(
+        eq(drafts.workspaceId, context.workspace.id),
+        state ? eq(drafts.state, state) : undefined,
+        opportunityId ? eq(drafts.opportunityId, opportunityId) : undefined,
+      ),
+      with: {
+        opportunity: { columns: { id: true, sourceUrl: true } },
+        versions: {
+          orderBy: [desc(draftVersions.versionNumber)],
+          limit: 1,
+        },
+      },
+      orderBy: [desc(drafts.updatedAt)],
+      limit,
+    });
+
+    const items = rows.map(({ versions, ...draft }) => ({
+      ...draft,
+      latestVersion: versions[0] ?? null,
+    }));
+
+    return NextResponse.json(draftListResponseSchema.parse({ items }));
+  } catch (error) {
+    return createApiErrorResponse({
+      code: "internal_error",
+      message: error instanceof Error ? error.message : "Failed to list drafts.",
+      status: 500,
+    });
+  }
+}
 
 export async function POST(req: Request) {
   try {

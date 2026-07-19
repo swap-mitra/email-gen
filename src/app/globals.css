@@ -657,6 +657,16 @@ a {
   flex-shrink: 0;
 }
 
+.feature-list a {
+  text-decoration: underline;
+  color: var(--ink);
+}
+
+.feature-list a:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
 /* ---------------------------------------------------------------------------
    Setup prompt (no-org state)
    --------------------------------------------------------------------------- */
@@ -801,7 +811,9 @@ a {
 .opp-form input,
 .opp-edit-form input,
 .opp-edit-form textarea,
-.opp-approve input {
+.opp-approve input,
+.k-form input,
+.k-form textarea {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   padding: 12px 14px;
@@ -813,7 +825,9 @@ a {
 .opp-form input:focus,
 .opp-edit-form input:focus,
 .opp-edit-form textarea:focus,
-.opp-approve input:focus {
+.opp-approve input:focus,
+.k-form input:focus,
+.k-form textarea:focus {
   outline: 2px solid var(--yellow-dim);
   outline-offset: -2px;
 }
@@ -821,14 +835,18 @@ a {
 .opp-form input::placeholder,
 .opp-edit-form input::placeholder,
 .opp-edit-form textarea::placeholder,
-.opp-approve input::placeholder {
+.opp-approve input::placeholder,
+.k-form input::placeholder,
+.k-form textarea::placeholder {
   color: var(--muted);
 }
 
 .opp-form input:disabled,
 .opp-edit-form input:disabled,
 .opp-edit-form textarea:disabled,
-.opp-approve input:disabled {
+.opp-approve input:disabled,
+.k-form input:disabled,
+.k-form textarea:disabled {
   opacity: 0.6;
 }
 
@@ -914,6 +932,18 @@ a {
 .opp-attempts {
   color: var(--muted);
   font-size: 0.68rem;
+}
+
+.opp-page-link {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.opp-page-link:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
 }
 
 .opp-error {
@@ -1043,6 +1073,344 @@ a {
 }
 
 /* ---------------------------------------------------------------------------
+   Dashboard section navigation
+   --------------------------------------------------------------------------- */
+.dash-nav {
+  border-bottom: var(--rule);
+  background: var(--white);
+}
+
+.dash-nav-inner {
+  width: min(1200px, calc(100% - 48px));
+  margin: 0 auto;
+  display: flex;
+  overflow-x: auto;
+}
+
+.dash-nav-link {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 18px;
+  border-right: 1px solid var(--divider);
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background 100ms, color 100ms;
+}
+
+.dash-nav-link:first-child {
+  border-left: 1px solid var(--divider);
+}
+
+.dash-nav-link:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+.dash-nav-link-active {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.dash-nav-link-active:hover {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+/* ---------------------------------------------------------------------------
+   Page scaffolding (list & detail pages)
+   --------------------------------------------------------------------------- */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-bottom: var(--rule-heavy);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.page-kicker {
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.page-intro {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 68ch;
+  margin-bottom: 24px;
+}
+
+.crumbs {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.crumbs a:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+/* Standalone bordered card (outside the dashboard grid) */
+.dash-block-card {
+  border: var(--rule-heavy);
+  background: var(--white);
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.block-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding-bottom: 10px;
+  border-bottom: var(--rule);
+}
+
+/* ---------------------------------------------------------------------------
+   Data tables
+   --------------------------------------------------------------------------- */
+.table-wrap {
+  overflow-x: auto;
+  border: var(--rule);
+  background: var(--white);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-bottom: var(--rule);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--divider);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cell-title a {
+  font-weight: 600;
+}
+
+.cell-title a:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+.cell-muted {
+  color: var(--muted);
+}
+
+.cell-muted a:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+.cell-time {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.empty-state {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--muted);
+  border: 1px dashed var(--muted);
+  padding: 20px;
+  background: var(--white);
+}
+
+.empty-state a {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+   Detail page layout (opportunity detail)
+   --------------------------------------------------------------------------- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.detail-side {
+  min-width: 0;
+}
+
+.raw-details {
+  border: var(--rule);
+  background: var(--white);
+}
+
+.raw-details summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  color: var(--muted);
+}
+
+.raw-details[open] summary {
+  border-bottom: 1px solid var(--divider);
+}
+
+.raw-pre {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Draft editor page
+   --------------------------------------------------------------------------- */
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.evidence-panel {
+  border: var(--rule-heavy);
+  background: var(--white);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.evidence-item {
+  border: var(--border);
+}
+
+.evidence-item summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.evidence-item summary:hover {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+.evidence-item[open] summary {
+  border-bottom: 1px solid var(--divider);
+}
+
+.evidence-item p {
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.approval-record {
+  margin-top: 20px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--muted);
+  border-left: 4px solid var(--yellow);
+  padding-left: 14px;
+}
+
+/* ---------------------------------------------------------------------------
+   Knowledge hub form
+   --------------------------------------------------------------------------- */
+.k-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.k-form textarea {
+  resize: vertical;
+  line-height: 1.6;
+  min-height: 120px;
+}
+
+.k-form .opp-actions {
+  margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Approval queue / misc
+   --------------------------------------------------------------------------- */
+.btn-compact {
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+.quick-approve {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-facts {
+  border: var(--rule);
+  background: var(--white);
+}
+
+.org-profile-wrap {
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
    Responsive
    --------------------------------------------------------------------------- */
 @media (max-width: 768px) {
@@ -1121,6 +1489,19 @@ a {
 
   .opp-step:last-child {
     border-bottom: none;
+  }
+
+  .detail-grid,
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-nav-inner {
+    width: 100%;
+  }
+
+  .dash-nav-link {
+    padding: 12px 14px;
   }
 }
 

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { DraftResponse, DraftVersionResponse, OpportunityResponse } from "@/lib/contracts/api";
+import { displayableFields } from "@/lib/labels";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 3 * 60 * 1000;
@@ -50,35 +52,6 @@ async function readJson(res: Response) {
     throw new Error(message ?? `Request failed (HTTP ${res.status}).`);
   }
   return body;
-}
-
-/** Human-readable label from a camelCase or snake_case field key. */
-function formatFieldKey(key: string): string {
-  const words = key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-/** Flatten extracted fields into displayable [label, value] pairs, skipping nested objects. */
-function displayableFields(fields: Record<string, unknown> | null | undefined): [string, string][] {
-  if (!fields) return [];
-  const pairs: [string, string][] = [];
-  for (const [key, value] of Object.entries(fields)) {
-    let rendered: string | null = null;
-    if (typeof value === "string") rendered = value;
-    else if (typeof value === "number" || typeof value === "boolean") rendered = String(value);
-    else if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-      rendered = (value as string[]).join(", ");
-    }
-    if (rendered && rendered.trim().length > 0) {
-      pairs.push([formatFieldKey(key), rendered.trim()]);
-    }
-    if (pairs.length >= 10) break;
-  }
-  return pairs;
 }
 
 export function OpportunityWorkflow() {
@@ -412,6 +385,11 @@ export function OpportunityWorkflow() {
           <div className="opp-status-row">
             <span className="t-label">Source</span>
             <span className="t-mono opp-status-url">{opportunity?.sourceUrl}</span>
+            {opportunity && (
+              <Link className="t-mono opp-page-link" href={`/dashboard/opportunities/${opportunity.id}`}>
+                View opportunity →
+              </Link>
+            )}
           </div>
 
           {(phase === "ingesting" || phase === "ready_to_generate" || phase === "ingest_failed") && (
@@ -545,6 +523,11 @@ export function OpportunityWorkflow() {
                   </span>
                 )}
                 {isApproved && <span className="opp-badge opp-badge-completed">Approved</span>}
+                {draft && (
+                  <Link className="t-mono opp-page-link" href={`/dashboard/drafts/${draft.id}`}>
+                    Open in draft editor →
+                  </Link>
+                )}
               </div>
 
               {isEditing ? (

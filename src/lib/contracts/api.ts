@@ -154,6 +154,35 @@ export const draftSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
+/** Draft plus the knowledge items behind its latest version's groundingRefs. */
+export const draftDetailSchema = draftSchema.extend({
+  evidence: z.array(knowledgeItemSchema),
+});
+
+// ---------------------------------------------------------------------------
+// List responses
+// ---------------------------------------------------------------------------
+
+export const opportunityListResponseSchema = z.object({
+  items: z.array(opportunitySchema),
+});
+
+export const knowledgeItemListResponseSchema = z.object({
+  items: z.array(knowledgeItemSchema),
+});
+
+/** Draft list row — carries enough of the opportunity to render a queue. */
+export const draftListItemSchema = draftSchema.extend({
+  opportunity: z.object({
+    id: z.string().uuid(),
+    sourceUrl: z.string().url(),
+  }),
+});
+
+export const draftListResponseSchema = z.object({
+  items: z.array(draftListItemSchema),
+});
+
 // ---------------------------------------------------------------------------
 // Approvals
 // ---------------------------------------------------------------------------
@@ -210,6 +239,11 @@ export type CreateDraftRequest = z.infer<typeof createDraftRequestSchema>;
 export type ReviseDraftRequest = z.infer<typeof reviseDraftRequestSchema>;
 export type DraftVersionResponse = z.infer<typeof draftVersionSchema>;
 export type DraftResponse = z.infer<typeof draftSchema>;
+export type DraftDetailResponse = z.infer<typeof draftDetailSchema>;
+export type OpportunityListResponse = z.infer<typeof opportunityListResponseSchema>;
+export type KnowledgeItemListResponse = z.infer<typeof knowledgeItemListResponseSchema>;
+export type DraftListItemResponse = z.infer<typeof draftListItemSchema>;
+export type DraftListResponse = z.infer<typeof draftListResponseSchema>;
 export type ApproveDraftRequest = z.infer<typeof approveDraftRequestSchema>;
 export type ApprovalResponse = z.infer<typeof approvalSchema>;
 export type ActivityResponse = z.infer<typeof activitySchema>;

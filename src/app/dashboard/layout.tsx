@@ -1,5 +1,6 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { DashboardNav } from "@/components/dashboard-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({
@@ -28,6 +29,9 @@ export default function DashboardLayout({
           </nav>
         </div>
       </header>
+
+      {/* ── Section navigation ─────────────────────────────────────── */}
+      <DashboardNav />
 
       {/* ── Dashboard body ─────────────────────────────────────────── */}
       <div className="dashboard-body">

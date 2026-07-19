@@ -1,36 +1,11 @@
 import { CreateOrganization } from "@clerk/nextjs";
+import Link from "next/link";
 import { listRecentActivities } from "@/lib/activity";
+import { formatActivityKind } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 import { OpportunityWorkflow } from "./opportunity-workflow";
 
 export const dynamic = "force-dynamic";
-
-const ACTIVITY_LABELS: Record<string, string> = {
-  "workspace.provisioned": "Workspace provisioned",
-  "opportunity.created": "Opportunity created",
-  "opportunity.reingest_requested": "Ingestion retry requested",
-  "opportunity.ingest_started": "Ingestion started",
-  "opportunity.ingest_completed": "Ingestion completed",
-  "opportunity.ingest_failed": "Ingestion failed",
-  "opportunity.browser_fallback_used": "Browser fallback used",
-  "opportunity.browser_fallback_failed": "Browser fallback failed",
-  "opportunity.browser_fallback_skipped": "Browser fallback skipped",
-  "opportunity.ai_extraction_skipped": "AI extraction skipped",
-  "knowledge_item.created": "Knowledge item added",
-  "knowledge_item.embedded": "Knowledge item embedded",
-  "knowledge_item.embedding_failed": "Knowledge embedding failed",
-  "knowledge_item.embedding_skipped": "Knowledge embedding skipped",
-  "draft.created": "Draft created",
-  "draft.generation_started": "Draft generation started",
-  "draft.generation_completed": "Draft generated",
-  "draft.generation_failed": "Draft generation failed",
-  "draft.revised": "Draft revised",
-  "draft.approved": "Draft approved",
-};
-
-function formatActivityKind(kind: string): string {
-  return ACTIVITY_LABELS[kind] ?? kind.replaceAll("_", " ").replace(".", " · ");
-}
 
 
 export default async function DashboardPage() {
@@ -86,10 +61,18 @@ export default async function DashboardPage() {
         <div className="dash-block">
           <h2>Get started</h2>
           <ul className="feature-list">
-            <li>Submit a job or company URL to create your first opportunity</li>
-            <li>Ground the message in your team&apos;s proof points and knowledge</li>
-            <li>Review and approve drafts before they go out</li>
-            <li>Track every action in the activity log below</li>
+            <li>Submit a job or company URL below to create your first opportunity</li>
+            <li>
+              Ground the message in your team&apos;s proof points — add them in the{" "}
+              <Link href="/dashboard/knowledge">knowledge hub</Link>
+            </li>
+            <li>
+              Review and approve drafts in the <Link href="/dashboard/approvals">approval queue</Link>
+            </li>
+            <li>
+              Track every opportunity on the{" "}
+              <Link href="/dashboard/opportunities">opportunities page</Link>
+            </li>
           </ul>
         </div>
 

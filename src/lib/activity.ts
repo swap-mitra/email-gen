@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { activities } from "@/db/schema";
 import { getDb } from "@/lib/db";
 
@@ -31,6 +31,21 @@ export async function listRecentActivities(workspaceId: string, limit = 10) {
     .select()
     .from(activities)
     .where(eq(activities.workspaceId, workspaceId))
+    .orderBy(desc(activities.createdAt))
+    .limit(limit);
+}
+
+export async function listActivitiesForEntity(
+  workspaceId: string,
+  entityId: string,
+  limit = 50,
+) {
+  const db = getDb();
+
+  return db
+    .select()
+    .from(activities)
+    .where(and(eq(activities.workspaceId, workspaceId), eq(activities.entityId, entityId)))
     .orderBy(desc(activities.createdAt))
     .limit(limit);
 }
