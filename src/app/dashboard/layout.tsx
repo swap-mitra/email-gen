@@ -1,5 +1,6 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({
   children,
@@ -15,7 +16,7 @@ export default function DashboardLayout({
             Email GenAI
             <span className="brand-badge">Workspace</span>
           </Link>
-          <nav className="header-nav" style={{ alignItems: "center", gap: 16 }}>
+          <nav className="header-nav header-nav--account">
             <OrganizationSwitcher
               afterCreateOrganizationUrl="/dashboard"
               afterLeaveOrganizationUrl="/dashboard"
@@ -23,6 +24,7 @@ export default function DashboardLayout({
               hidePersonal
             />
             <UserButton />
+            <ThemeToggle />
           </nav>
         </div>
       </header>

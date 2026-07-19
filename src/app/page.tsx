@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const capabilities = [
   "Submit a job or company URL and extract a structured opportunity",
@@ -30,6 +31,7 @@ export default async function Home() {
                 <Link href="/sign-up">Create workspace</Link>
               </>
             )}
+            <ThemeToggle />
           </nav>
         </div>
       </header>
