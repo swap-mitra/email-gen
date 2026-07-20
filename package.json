@@ -8,6 +8,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev",
+    "inngest": "npx inngest-cli@latest dev",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

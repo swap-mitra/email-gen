@@ -48,10 +48,14 @@ npm run db:generate
 npm run db:push
 ```
 
-4. Start the development server:
+4. Start the development server, and in a separate terminal, the Inngest dev server (required for background workflows — set `INNGEST_DEV=1` in `.env` first, see the comment above `INNGEST_DEV` in `.env.example`):
 
 ```bash
 npm run dev
+```
+
+```bash
+npm run inngest
 ```
 
 ## Required environment variables
@@ -70,6 +74,7 @@ OPENROUTER_EMBEDDING_MODEL=
 BROWSERBASE_API_KEY=
 BROWSERBASE_PROJECT_ID=
 BLOB_READ_WRITE_TOKEN=
+INNGEST_DEV=
 INNGEST_EVENT_KEY=
 INNGEST_SIGNING_KEY=
 ```
