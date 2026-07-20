@@ -39,13 +39,13 @@ export const embedKnowledgeItem = inngest.createFunction(
         kind: "knowledge_item.embedding_skipped",
         entityType: "knowledge_item",
         entityId: knowledgeItemId,
-        payload: { reason: "GEMINI_API_KEY not configured" },
+        payload: { reason: "OPENROUTER_API_KEY not configured" },
       });
       return true;
     });
 
     if (skipped) {
-      log.info("embed_knowledge_item_skipped", { reason: "GEMINI_API_KEY not configured" });
+      log.info("embed_knowledge_item_skipped", { reason: "OPENROUTER_API_KEY not configured" });
       return { knowledgeItemId, skipped: true };
     }
 

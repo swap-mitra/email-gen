@@ -1,7 +1,9 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { knowledgeItems, type KnowledgeItem } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { embedQueryText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
+import { embedQueryText, isEmbeddingConfigured, EMBEDDING_DIMENSIONS } from "@/lib/ai/embeddings";
+
+const vectorType = sql.raw(`vector(${EMBEDDING_DIMENSIONS})`);
 
 const RRF_K = 60;
 const LEXICAL_LIMIT = 20;
@@ -133,7 +135,7 @@ export async function retrieveKnowledgeForOpportunity(args: {
           and(eq(knowledgeItems.workspaceId, workspaceId), eq(knowledgeItems.embedded, true)),
         )
         .orderBy(
-          sql`(${knowledgeItems.embedding}::vector(1536)) <=> ${vectorLiteral}::vector(1536)`,
+          sql`(${knowledgeItems.embedding}::${vectorType}) <=> ${vectorLiteral}::${vectorType}`,
         )
         .limit(VECTOR_LIMIT);
       vectorIds = vectorRows.map((r) => r.id);

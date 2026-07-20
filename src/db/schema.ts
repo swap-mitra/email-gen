@@ -101,7 +101,8 @@ export const knowledgeItems = pgTable("knowledge_items", {
 
   /**
    * Embedding stored as a real[] array.
-   * Dimensionality: 1536 (gemini-embedding-001, truncated via outputDimensionality).
+   * Dimensionality: see EMBEDDING_DIMENSIONS in src/lib/ai/embeddings.ts
+   * (nvidia/llama-nemotron-embed-vl-1b-v2:free via OpenRouter).
    * Cast to vector in raw SQL for pgvector operations.
    */
   embedding: real("embedding").array(),

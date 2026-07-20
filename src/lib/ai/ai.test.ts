@@ -37,30 +37,30 @@ describe("P5 AI — openrouter-client configuration guard", () => {
 });
 
 // ---------------------------------------------------------------------------
-// embeddings.ts — configuration guard (Gemini)
+// embeddings.ts — configuration guard (OpenRouter)
 // ---------------------------------------------------------------------------
 
 describe("P5 AI — embeddings configuration guard", () => {
   beforeEach(() => {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
-  it("reports unconfigured when GEMINI_API_KEY is not set", () => {
+  it("reports unconfigured when OPENROUTER_API_KEY is not set", () => {
     expect(isEmbeddingConfigured()).toBe(false);
   });
 
-  it("reports configured when GEMINI_API_KEY is set", () => {
-    process.env.GEMINI_API_KEY = "test-key";
+  it("reports configured when OPENROUTER_API_KEY is set", () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
     expect(isEmbeddingConfigured()).toBe(true);
   });
 
   it("embedQueryText throws a descriptive error when unconfigured", async () => {
-    await expect(embedQueryText("some query")).rejects.toThrow("GEMINI_API_KEY must be set");
+    await expect(embedQueryText("some query")).rejects.toThrow("OPENROUTER_API_KEY must be set");
   });
 
   it("embedDocumentText throws a descriptive error when unconfigured", async () => {
     await expect(embedDocumentText("some knowledge content")).rejects.toThrow(
-      "GEMINI_API_KEY must be set",
+      "OPENROUTER_API_KEY must be set",
     );
   });
 });
