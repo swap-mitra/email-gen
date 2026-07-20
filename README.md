@@ -41,7 +41,7 @@ npm install
 copy .env.example .env.local
 ```
 
-3. Apply the database schema against your PostgreSQL database:
+3. Apply the database schema against your Postgres database (Neon recommended — any Postgres 15+ with the `pgvector` extension works; see the `DATABASE_URL` comment in `.env.example`):
 
 ```bash
 npm run db:generate
@@ -58,12 +58,15 @@ npm run dev
 
 ```bash
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/email_gen
+DATABASE_URL=postgresql://user:password@host-pooler.region.aws.neon.tech/dbname?sslmode=require
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 CLERK_SIGN_IN_URL=/sign-in
 CLERK_SIGN_UP_URL=/sign-up
-OPENAI_API_KEY=
+OPENROUTER_API_KEY=
+OPENROUTER_EXTRACTION_MODEL=
+OPENROUTER_GENERATION_MODEL=
+OPENROUTER_EMBEDDING_MODEL=
 BROWSERBASE_API_KEY=
 BROWSERBASE_PROJECT_ID=
 BLOB_READ_WRITE_TOKEN=

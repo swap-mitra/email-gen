@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   schema: "./src/db/schema.ts",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/email_gen",
+    url: process.env.DATABASE_URL!,
   },
 });
