@@ -1267,21 +1267,31 @@ a {
 /* ---------------------------------------------------------------------------
    Detail page layout (opportunity detail)
    --------------------------------------------------------------------------- */
-.detail-grid {
+
+/* Row 1: extraction status + ingest log, side by side, equal height. */
+.opp-detail-top {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
-.detail-main {
+.opp-detail-top > .dash-block-card {
+  margin-bottom: 0;
+}
+
+/* Rows 2-4: normalized fields, extraction metadata, drafts — each its own
+   full-width row, matching the combined width of row 1 above. */
+.opp-detail-bottom {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  margin-top: 24px;
   min-width: 0;
 }
 
-.detail-side {
+.opp-detail-bottom > * {
+  margin-bottom: 0;
   min-width: 0;
 }
 
@@ -1491,7 +1501,7 @@ a {
     border-bottom: none;
   }
 
-  .detail-grid,
+  .opp-detail-top,
   .editor-grid {
     grid-template-columns: 1fr;
   }

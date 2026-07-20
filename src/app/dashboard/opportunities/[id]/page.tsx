@@ -68,136 +68,136 @@ export default async function OpportunityDetailPage({
         </div>
       </div>
 
-      <div className="detail-grid">
-        <div className="detail-main">
-          {/* Status */}
-          <div className="dash-block-card">
-            <h2 className="block-title">Extraction status</h2>
-            <div className="opp-status-row">
-              <span className="t-label">Source</span>
-              <a
-                className="t-mono opp-status-url"
-                href={opportunity.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {opportunity.sourceUrl}
-              </a>
-            </div>
-            <div className="opp-status-row">
-              <span className="t-label">Ingestion</span>
-              <span className={`opp-badge opp-badge-${opportunity.ingestStatus}`}>
-                {opportunity.ingestStatus}
-              </span>
-              {isWorking && <span className="opp-working" aria-hidden="true" />}
-              {opportunity.ingestAttempts > 1 && (
-                <span className="t-mono opp-attempts">attempt {opportunity.ingestAttempts}</span>
-              )}
-            </div>
-            {opportunity.ingestStatus === "failed" && (
-              <p className="opp-error">{opportunity.ingestError ?? "Ingestion failed."}</p>
-            )}
-            <OpportunityActions
-              opportunityId={opportunity.id}
-              ingestStatus={opportunity.ingestStatus}
-            />
+      {/* Row 1: extraction status + ingest log, equal height */}
+      <div className="opp-detail-top">
+        <div className="dash-block-card">
+          <h2 className="block-title">Extraction status</h2>
+          <div className="opp-status-row">
+            <span className="t-label">Source</span>
+            <a
+              className="t-mono opp-status-url"
+              href={opportunity.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {opportunity.sourceUrl}
+            </a>
           </div>
-
-          {/* Normalized fields */}
-          {fields.length > 0 && (
-            <div className="opp-fields">
-              <p className="t-label opp-fields-title">Normalized fields</p>
-              <dl className="opp-fields-grid">
-                {fields.map(([label, value]) => (
-                  <div className="opp-field" key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          {/* Extraction metadata */}
-          {opportunity.extractionMeta && (
-            <details className="raw-details">
-              <summary className="t-label">Extraction metadata</summary>
-              <pre className="raw-pre">{JSON.stringify(opportunity.extractionMeta, null, 2)}</pre>
-            </details>
-          )}
-
-          {/* Drafts */}
-          <div className="dash-block-card">
-            <h2 className="block-title">Drafts ({opportunityDrafts.length})</h2>
-            {opportunityDrafts.length === 0 ? (
-              <p className="empty-state">
-                No drafts yet.
-                {opportunity.ingestStatus === "completed"
-                  ? " Generate one with the button above."
-                  : " Drafts can be generated once ingestion completes."}
-              </p>
-            ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Subject</th>
-                      <th>State</th>
-                      <th>Generation</th>
-                      <th>Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {opportunityDrafts.map((draft) => (
-                      <tr key={draft.id}>
-                        <td className="cell-title">
-                          <Link href={`/dashboard/drafts/${draft.id}`}>
-                            {draft.versions[0]?.subject ?? `Draft ${draft.id.slice(0, 8)}`}
-                          </Link>
-                        </td>
-                        <td>
-                          <span className={draftStateBadgeClass(draft.state)}>
-                            {formatDraftState(draft.state)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`opp-badge opp-badge-${draft.generationStatus}`}>
-                            {draft.generationStatus}
-                          </span>
-                        </td>
-                        <td className="cell-time">{formatDateTime(draft.updatedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <div className="opp-status-row">
+            <span className="t-label">Ingestion</span>
+            <span className={`opp-badge opp-badge-${opportunity.ingestStatus}`}>
+              {opportunity.ingestStatus}
+            </span>
+            {isWorking && <span className="opp-working" aria-hidden="true" />}
+            {opportunity.ingestAttempts > 1 && (
+              <span className="t-mono opp-attempts">attempt {opportunity.ingestAttempts}</span>
             )}
           </div>
+          {opportunity.ingestStatus === "failed" && (
+            <p className="opp-error">{opportunity.ingestError ?? "Ingestion failed."}</p>
+          )}
+          <OpportunityActions
+            opportunityId={opportunity.id}
+            ingestStatus={opportunity.ingestStatus}
+          />
         </div>
 
-        {/* Ingest log */}
-        <aside className="detail-side">
-          <div className="dash-block-card">
-            <h2 className="block-title">Ingest log</h2>
-            {ingestLog.length === 0 ? (
-              <p className="empty-state">No events recorded for this opportunity.</p>
-            ) : (
-              <ul className="activity-feed">
-                {ingestLog.map((activity) => (
-                  <li key={activity.id}>
-                    <span className="activity-kind">{formatActivityKind(activity.kind)}</span>
-                    <span className="activity-entity">
-                      {activity.actorClerkUserId ? "user action" : "system"}
-                    </span>
-                    <time className="activity-time" dateTime={activity.createdAt.toISOString()}>
-                      {formatDateTime(activity.createdAt)}
-                    </time>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
+        <div className="dash-block-card">
+          <h2 className="block-title">Ingest log</h2>
+          {ingestLog.length === 0 ? (
+            <p className="empty-state">No events recorded for this opportunity.</p>
+          ) : (
+            <ul className="activity-feed">
+              {ingestLog.map((activity) => (
+                <li key={activity.id}>
+                  <span className="activity-kind">{formatActivityKind(activity.kind)}</span>
+                  <span className="activity-entity">
+                    {activity.actorClerkUserId ? "user action" : "system"}
+                  </span>
+                  <time className="activity-time" dateTime={activity.createdAt.toISOString()}>
+                    {formatDateTime(activity.createdAt)}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: normalized fields, extraction metadata, drafts — same total
+          width as row 1, three equal columns */}
+      <div className="opp-detail-bottom">
+        <div className="opp-fields">
+          <p className="t-label opp-fields-title">Normalized fields</p>
+          {fields.length === 0 ? (
+            <p className="empty-state">No normalized fields extracted yet.</p>
+          ) : (
+            <dl className="opp-fields-grid">
+              {fields.map(([label, value]) => (
+                <div className="opp-field" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+
+        <details className="raw-details" open={!!opportunity.extractionMeta}>
+          <summary className="t-label">Extraction metadata</summary>
+          {opportunity.extractionMeta ? (
+            <pre className="raw-pre">{JSON.stringify(opportunity.extractionMeta, null, 2)}</pre>
+          ) : (
+            <p className="empty-state">No extraction metadata yet.</p>
+          )}
+        </details>
+
+        <div className="dash-block-card">
+          <h2 className="block-title">Drafts ({opportunityDrafts.length})</h2>
+          {opportunityDrafts.length === 0 ? (
+            <p className="empty-state">
+              No drafts yet.
+              {opportunity.ingestStatus === "completed"
+                ? " Generate one with the button above."
+                : " Drafts can be generated once ingestion completes."}
+            </p>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>State</th>
+                    <th>Generation</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {opportunityDrafts.map((draft) => (
+                    <tr key={draft.id}>
+                      <td className="cell-title">
+                        <Link href={`/dashboard/drafts/${draft.id}`}>
+                          {draft.versions[0]?.subject ?? `Draft ${draft.id.slice(0, 8)}`}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className={draftStateBadgeClass(draft.state)}>
+                          {formatDraftState(draft.state)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`opp-badge opp-badge-${draft.generationStatus}`}>
+                          {draft.generationStatus}
+                        </span>
+                      </td>
+                      <td className="cell-time">{formatDateTime(draft.updatedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
