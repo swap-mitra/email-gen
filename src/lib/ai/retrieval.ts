@@ -3,7 +3,12 @@ import { knowledgeItems, type KnowledgeItem } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { embedQueryText, isEmbeddingConfigured, EMBEDDING_DIMENSIONS } from "@/lib/ai/embeddings";
 
-const vectorType = sql.raw(`vector(${EMBEDDING_DIMENSIONS})`);
+// pgvector's index types (HNSW/IVFFlat) cap indexed columns at 2000
+// dimensions for `vector`. This model's 2048-dim output exceeds that, so
+// queries and the HNSW index (see drizzle/0003_*.sql) both use `halfvec`
+// instead, which supports up to 4000 dims at half-precision — a
+// pgvector-recommended, negligible-precision-loss fix for this exact case.
+const vectorType = sql.raw(`halfvec(${EMBEDDING_DIMENSIONS})`);
 
 const RRF_K = 60;
 const LEXICAL_LIMIT = 20;
