@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { messagesParse } from "@/lib/ai/anthropic-client";
+import { chatJson } from "@/lib/ai/openrouter-client";
 import type { KnowledgeItem, Opportunity } from "@/db/schema";
 
-export const GENERATION_MODEL = "claude-opus-4-8";
+export const GENERATION_MODEL =
+  process.env.OPENROUTER_GENERATION_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
 
 export const generatedDraftSchema = z.object({
   subject: z.string(),
@@ -18,8 +19,8 @@ Keep the tone professional, warm, and specific to the opportunity. Avoid generic
 
 /**
  * Grounded generation: combines normalized opportunity data with retrieved
- * knowledge items to produce a subject + body via Claude Opus 4.8.
- * Throws if ANTHROPIC_API_KEY is not configured — draft generation requires AI.
+ * knowledge items to produce a subject + body via an OpenRouter chat model.
+ * Throws if OPENROUTER_API_KEY is not configured — draft generation requires AI.
  */
 export async function generateDraftEmail(args: {
   opportunity: Pick<Opportunity, "sourceUrl" | "normalizedFields">;
@@ -48,7 +49,7 @@ export async function generateDraftEmail(args: {
     "Write a subject line and email body for this outreach.",
   ].join("\n");
 
-  return messagesParse({
+  return chatJson({
     model: GENERATION_MODEL,
     system: SYSTEM_PROMPT,
     user: userPrompt,

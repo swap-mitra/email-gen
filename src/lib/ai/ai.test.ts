@@ -3,36 +3,36 @@ import { reciprocalRankFusion, maximalMarginalRelevance } from "@/lib/ai/retriev
 import { toNormalizedFields, aiExtractedFieldsSchema } from "@/lib/ai/extraction";
 import { generatedDraftSchema, generateDraftEmail } from "@/lib/ai/generation";
 import { embedQueryText, embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
-import { messagesParse, isAnthropicConfigured } from "@/lib/ai/anthropic-client";
+import { chatJson, isOpenRouterConfigured } from "@/lib/ai/openrouter-client";
 import type { FetchedContent } from "@/lib/ingestion/fetch-content";
 
 // ---------------------------------------------------------------------------
-// anthropic-client.ts — configuration guard
+// openrouter-client.ts — configuration guard
 // ---------------------------------------------------------------------------
 
-describe("P5 AI — anthropic-client configuration guard", () => {
+describe("P5 AI — openrouter-client configuration guard", () => {
   beforeEach(() => {
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
-  it("reports unconfigured when ANTHROPIC_API_KEY is not set", () => {
-    expect(isAnthropicConfigured()).toBe(false);
+  it("reports unconfigured when OPENROUTER_API_KEY is not set", () => {
+    expect(isOpenRouterConfigured()).toBe(false);
   });
 
-  it("reports configured when ANTHROPIC_API_KEY is set", () => {
-    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
-    expect(isAnthropicConfigured()).toBe(true);
+  it("reports configured when OPENROUTER_API_KEY is set", () => {
+    process.env.OPENROUTER_API_KEY = "sk-or-test";
+    expect(isOpenRouterConfigured()).toBe(true);
   });
 
-  it("messagesParse throws a descriptive error when unconfigured", async () => {
+  it("chatJson throws a descriptive error when unconfigured", async () => {
     await expect(
-      messagesParse({
-        model: "claude-haiku-4-5",
+      chatJson({
+        model: "openai/gpt-oss-20b:free",
         system: "system",
         user: "user",
         schema: generatedDraftSchema,
       }),
-    ).rejects.toThrow("ANTHROPIC_API_KEY must be set");
+    ).rejects.toThrow("OPENROUTER_API_KEY must be set");
   });
 });
 
@@ -213,7 +213,7 @@ describe("P5 AI — toNormalizedFields", () => {
 
 describe("P5 AI — generateDraftEmail", () => {
   beforeEach(() => {
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
   it("validates well-formed output against generatedDraftSchema", () => {
@@ -224,12 +224,12 @@ describe("P5 AI — generateDraftEmail", () => {
     expect(result.subject).toContain("Quick question");
   });
 
-  it("throws when ANTHROPIC_API_KEY is not configured", async () => {
+  it("throws when OPENROUTER_API_KEY is not configured", async () => {
     await expect(
       generateDraftEmail({
         opportunity: { sourceUrl: "https://example.com", normalizedFields: null },
         knowledgeItems: [],
       }),
-    ).rejects.toThrow("ANTHROPIC_API_KEY must be set");
+    ).rejects.toThrow("OPENROUTER_API_KEY must be set");
   });
 });

@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { messagesParse } from "@/lib/ai/anthropic-client";
+import { chatJson } from "@/lib/ai/openrouter-client";
 import type { FetchedContent } from "@/lib/ingestion/fetch-content";
 
-export const EXTRACTION_MODEL = "claude-haiku-4-5";
+export const EXTRACTION_MODEL = process.env.OPENROUTER_EXTRACTION_MODEL ?? "openai/gpt-oss-20b:free";
 
 // Text is truncated before being sent to the model — keeps token usage bounded
 // and predictable regardless of source page size.
@@ -29,9 +29,9 @@ Only use information present in the provided text — never invent details.
 Use null for any field that is not present in the text.`;
 
 /**
- * Schema-constrained extraction of normalized opportunity fields via
- * Claude Haiku 4.5. Throws if ANTHROPIC_API_KEY is not configured or the
- * model output fails validation — callers should fall back to the
+ * Schema-constrained extraction of normalized opportunity fields via an
+ * OpenRouter chat model. Throws if OPENROUTER_API_KEY is not configured or
+ * the model output fails validation — callers should fall back to the
  * rule-based extractor from fetch-content.ts.
  */
 export async function extractFieldsWithAI(
@@ -47,7 +47,7 @@ export async function extractFieldsWithAI(
     content.text.slice(0, MAX_INPUT_CHARS),
   ].join("\n");
 
-  return messagesParse({
+  return chatJson({
     model: EXTRACTION_MODEL,
     system: SYSTEM_PROMPT,
     user: userPrompt,

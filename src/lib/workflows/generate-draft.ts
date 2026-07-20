@@ -6,7 +6,7 @@ import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { retrieveKnowledgeForOpportunity } from "@/lib/ai/retrieval";
 import { generateDraftEmail } from "@/lib/ai/generation";
-import { isAnthropicConfigured } from "@/lib/ai/anthropic-client";
+import { isOpenRouterConfigured } from "@/lib/ai/openrouter-client";
 import { logger } from "@/lib/logger";
 
 function buildRetrievalQuery(normalizedFields: Record<string, unknown> | null): string {
@@ -95,14 +95,14 @@ export const generateDraft = inngest.createFunction(
     });
 
     // ── Step 3: Generate content ──────────────────────────────────────────
-    //    Grounded generation via Claude Opus 4.8 using normalized opportunity data
-    //    plus the retrieved knowledge items.
+    //    Grounded generation via the configured OpenRouter generation model
+    //    using normalized opportunity data plus the retrieved knowledge items.
     const generated = await step.run("generate-content", async () => {
-      if (!isAnthropicConfigured()) {
+      if (!isOpenRouterConfigured()) {
         // Draft generation has no non-AI fallback — fail fast rather than
         // burning retries on a permanent configuration problem.
         throw new NonRetriableError(
-          "ANTHROPIC_API_KEY must be set to generate drafts.",
+          "OPENROUTER_API_KEY must be set to generate drafts.",
         );
       }
 
