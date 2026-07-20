@@ -15,6 +15,13 @@
       "when": 1784132353324,
       "tag": "0001_small_mach_iv",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784539399650,
+      "tag": "0002_rebuild_embedding_hnsw_index",
+      "breakpoints": true
     }
   ]
 }
