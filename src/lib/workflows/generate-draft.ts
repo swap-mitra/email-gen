@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { retrieveKnowledgeForOpportunity } from "@/lib/ai/retrieval";
 import { generateDraftEmail } from "@/lib/ai/generation";
 import { isAnthropicConfigured } from "@/lib/ai/anthropic-client";
+import { logger } from "@/lib/logger";
 
 function buildRetrievalQuery(normalizedFields: Record<string, unknown> | null): string {
   if (!normalizedFields) return "";
@@ -30,8 +31,11 @@ export const generateDraft = inngest.createFunction(
       key: "event.data.draftId",
     },
   },
-  async ({ event, step }) => {
+  async ({ event, step, runId }) => {
     const { draftId, workspaceId, opportunityId } = event.data as DraftGenerateData;
+    const log = logger.child({ runId, workspaceId, draftId, opportunityId });
+
+    log.info("generate_draft_started");
 
     // ── Step 1: Mark as running ──────────────────────────────────────────
     const opportunity = await step.run("mark-running", async () => {
@@ -158,6 +162,8 @@ export const generateDraft = inngest.createFunction(
       });
     });
 
+    log.info("generate_draft_completed", { groundingRefsCount: generated.groundingRefs.length });
+
     return { draftId, groundingRefsCount: generated.groundingRefs.length };
   },
 );
@@ -172,16 +178,27 @@ export const onGenerateDraftFailure = inngest.createFunction(
     triggers: [{ event: "inngest/function.failed" }],
   },
   async ({ event, step }) => {
-    const original = (event.data as Record<string, unknown>).event as {
+    const failureData = event.data as Record<string, unknown>;
+    const original = failureData.event as {
       name: string;
       data: DraftGenerateData;
     };
     if (original.name !== "email-gen/draft.generate") return;
 
     const { draftId, workspaceId } = original.data;
-    const errorMessage =
-      ((event.data as Record<string, unknown>).error as { message?: string })?.message ??
-      "Unknown error";
+    const failedRunError = failureData.error as
+      | { message?: string; name?: string; stack?: string }
+      | undefined;
+    const errorMessage = failedRunError?.message ?? "Unknown error";
+
+    logger.error("generate_draft_failed", {
+      runId: failureData.run_id,
+      workspaceId,
+      draftId,
+      errorMessage,
+      errorName: failedRunError?.name,
+      errorStack: failedRunError?.stack,
+    });
 
     await step.run("mark-failed", async () => {
       const db = getDb();

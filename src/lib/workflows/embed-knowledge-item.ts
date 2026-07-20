@@ -5,6 +5,7 @@ import { knowledgeItems } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // embed-knowledge-item — P5 embedding step function
@@ -22,8 +23,9 @@ export const embedKnowledgeItem = inngest.createFunction(
       key: "event.data.knowledgeItemId",
     },
   },
-  async ({ event, step }) => {
+  async ({ event, step, runId }) => {
     const { knowledgeItemId, workspaceId } = event.data as KnowledgeItemEmbedData;
+    const log = logger.child({ runId, workspaceId, knowledgeItemId });
 
     // ── Step 1: Skip gracefully when AI is not configured ────────────────
     //    Retrieval still works via lexical search alone; embedding is an
@@ -43,6 +45,7 @@ export const embedKnowledgeItem = inngest.createFunction(
     });
 
     if (skipped) {
+      log.info("embed_knowledge_item_skipped", { reason: "GEMINI_API_KEY not configured" });
       return { knowledgeItemId, skipped: true };
     }
 
@@ -72,6 +75,8 @@ export const embedKnowledgeItem = inngest.createFunction(
         entityId: knowledgeItemId,
         payload: { dimensions: vector.length },
       });
+
+      log.info("embed_knowledge_item_completed", { dimensions: vector.length });
     });
 
     return { knowledgeItemId, skipped: false };
@@ -89,16 +94,27 @@ export const onEmbedKnowledgeItemFailure = inngest.createFunction(
     triggers: [{ event: "inngest/function.failed" }],
   },
   async ({ event, step }) => {
-    const original = (event.data as Record<string, unknown>).event as {
+    const failureData = event.data as Record<string, unknown>;
+    const original = failureData.event as {
       name: string;
       data: KnowledgeItemEmbedData;
     };
     if (original.name !== KNOWLEDGE_ITEM_EMBED_EVENT) return;
 
     const { knowledgeItemId, workspaceId } = original.data;
-    const errorMessage =
-      ((event.data as Record<string, unknown>).error as { message?: string })?.message ??
-      "Unknown error";
+    const failedRunError = failureData.error as
+      | { message?: string; name?: string; stack?: string }
+      | undefined;
+    const errorMessage = failedRunError?.message ?? "Unknown error";
+
+    logger.error("embed_knowledge_item_failed", {
+      runId: failureData.run_id,
+      workspaceId,
+      knowledgeItemId,
+      errorMessage,
+      errorName: failedRunError?.name,
+      errorStack: failedRunError?.stack,
+    });
 
     await step.run("log-failure", async () => {
       await recordActivity({

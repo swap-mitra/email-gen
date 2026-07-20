@@ -8,6 +8,7 @@ import { fetchAndExtractContent, extractNormalizedFields } from "@/lib/ingestion
 import { browserbaseFetch } from "@/lib/ingestion/browser-fallback";
 import { persistRawHtmlArtifact } from "@/lib/ingestion/persist-artifact";
 import { extractFieldsWithAI, toNormalizedFields } from "@/lib/ai/extraction";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // ingest-opportunity — full P3+P4 durable step function
@@ -25,8 +26,11 @@ export const ingestOpportunity = inngest.createFunction(
       key: "event.data.opportunityId",
     },
   },
-  async ({ event, step }) => {
+  async ({ event, step, runId }) => {
     const { opportunityId, workspaceId, attempt } = event.data as OpportunityIngestData;
+    const log = logger.child({ runId, workspaceId, opportunityId, attempt });
+
+    log.info("ingest_opportunity_started");
 
     // ── Step 1: Mark as running ──────────────────────────────────────────
     await step.run("mark-running", async () => {
@@ -123,6 +127,7 @@ export const ingestOpportunity = inngest.createFunction(
       } catch (err) {
         // Browser fallback failure is non-fatal — we continue with direct result
         const message = err instanceof Error ? err.message : String(err);
+        log.warn("browser_fallback_failed", { error: message });
         await recordActivity({
           workspaceId,
           kind: "opportunity.browser_fallback_failed",
@@ -188,6 +193,9 @@ export const ingestOpportunity = inngest.createFunction(
       } catch (err) {
         usedAiExtraction = false;
         normalizedFields = extractNormalizedFields(fetchedContent, browserResult.sourceUrl);
+        log.warn("ai_extraction_skipped", {
+          error: err instanceof Error ? err.message : String(err),
+        });
         await recordActivity({
           workspaceId,
           kind: "opportunity.ai_extraction_skipped",
@@ -234,6 +242,11 @@ export const ingestOpportunity = inngest.createFunction(
       });
     });
 
+    log.info("ingest_opportunity_completed", {
+      textLength: browserResult.text.length,
+      usedBrowserFallback: browserResult.used,
+    });
+
     return {
       opportunityId,
       textLength: browserResult.text.length,
@@ -253,16 +266,27 @@ export const onIngestFailure = inngest.createFunction(
     triggers: [{ event: "inngest/function.failed" }],
   },
   async ({ event, step }) => {
-    const original = (event.data as Record<string, unknown>).event as {
+    const failureData = event.data as Record<string, unknown>;
+    const original = failureData.event as {
       name: string;
       data: OpportunityIngestData;
     };
     if (original.name !== OPPORTUNITY_INGEST_EVENT) return;
 
     const { opportunityId, workspaceId } = original.data;
-    const errorMessage =
-      ((event.data as Record<string, unknown>).error as { message?: string })
-        ?.message ?? "Unknown error";
+    const failedRunError = failureData.error as
+      | { message?: string; name?: string; stack?: string }
+      | undefined;
+    const errorMessage = failedRunError?.message ?? "Unknown error";
+
+    logger.error("ingest_opportunity_failed", {
+      runId: failureData.run_id,
+      workspaceId,
+      opportunityId,
+      errorMessage,
+      errorName: failedRunError?.name,
+      errorStack: failedRunError?.stack,
+    });
 
     await step.run("mark-failed", async () => {
       const db = getDb();
