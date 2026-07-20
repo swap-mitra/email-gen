@@ -72,6 +72,7 @@ export async function GET(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to list drafts.",
       status: 500,
+      cause: error,
     });
   }
 }
@@ -163,6 +164,7 @@ export async function POST(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to create draft.",
       status: 500,
+      cause: error,
     });
   }
 }

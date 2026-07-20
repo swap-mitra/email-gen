@@ -41,6 +41,7 @@ export async function GET(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to fetch activities.",
       status: 500,
+      cause: error,
     });
   }
 }

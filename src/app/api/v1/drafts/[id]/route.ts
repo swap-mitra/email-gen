@@ -78,6 +78,7 @@ export async function GET(
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to fetch draft.",
       status: 500,
+      cause: error,
     });
   }
 }

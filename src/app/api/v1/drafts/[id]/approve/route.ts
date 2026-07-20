@@ -109,6 +109,7 @@ export async function POST(
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to approve draft.",
       status: 500,
+      cause: error,
     });
   }
 }

@@ -38,6 +38,7 @@ export async function GET() {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Unable to resolve workspace context.",
       status: 500,
+      cause: error,
     });
   }
 }

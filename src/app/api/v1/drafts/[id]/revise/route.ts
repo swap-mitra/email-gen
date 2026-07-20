@@ -102,6 +102,7 @@ export async function POST(
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to revise draft.",
       status: 500,
+      cause: error,
     });
   }
 }

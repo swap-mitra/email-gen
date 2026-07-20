@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiErrorSchema, type ApiErrorCode } from "@/lib/contracts/api";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Error responses
@@ -12,6 +13,8 @@ type CreateApiErrorArgs = {
   status: number;
   details?: Record<string, unknown>;
   requestId?: string;
+  /** The underlying error, if any — logged server-side but never sent to the client. */
+  cause?: unknown;
 };
 
 export function createApiErrorResponse({
@@ -20,15 +23,31 @@ export function createApiErrorResponse({
   status,
   details,
   requestId,
+  cause,
 }: CreateApiErrorArgs) {
+  const resolvedRequestId = requestId ?? crypto.randomUUID();
+
   const payload = apiErrorSchema.parse({
     error: {
       code,
       message,
-      requestId: requestId ?? crypto.randomUUID(),
+      requestId: resolvedRequestId,
       details,
     },
   });
+
+  // Server errors are unexpected — log them for operator tracing. Client
+  // errors (bad input, auth, not found, conflict) are expected control flow
+  // and would just be noise in error monitoring.
+  if (status >= 500) {
+    logger.error("api_error", {
+      requestId: resolvedRequestId,
+      code,
+      status,
+      message,
+      ...(cause !== undefined ? { error: cause } : {}),
+    });
+  }
 
   return NextResponse.json(payload, { status });
 }

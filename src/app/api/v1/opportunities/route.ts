@@ -55,6 +55,7 @@ export async function GET(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to list opportunities.",
       status: 500,
+      cause: error,
     });
   }
 }
@@ -120,6 +121,7 @@ export async function POST(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to create opportunity.",
       status: 500,
+      cause: error,
     });
   }
 }

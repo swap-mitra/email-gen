@@ -97,6 +97,7 @@ export async function POST(
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to reingest opportunity.",
       status: 500,
+      cause: error,
     });
   }
 }

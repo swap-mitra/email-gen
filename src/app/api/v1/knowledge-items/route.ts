@@ -55,6 +55,7 @@ export async function GET(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to list knowledge items.",
       status: 500,
+      cause: error,
     });
   }
 }
@@ -119,6 +120,7 @@ export async function POST(req: Request) {
       code: "internal_error",
       message: error instanceof Error ? error.message : "Failed to create knowledge item.",
       status: 500,
+      cause: error,
     });
   }
 }
