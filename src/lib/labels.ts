@@ -23,6 +23,9 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "draft.generation_failed": "Draft generation failed",
   "draft.revised": "Draft revised",
   "draft.approved": "Draft approved",
+  "draft.export_started": "Export started",
+  "draft.export_completed": "Draft exported",
+  "draft.export_failed": "Export failed",
 };
 
 export function formatActivityKind(kind: string): string {

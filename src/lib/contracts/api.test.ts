@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { apiErrorSchema, healthResponseSchema, workspaceContextResponseSchema } from "./api";
+import {
+  apiErrorSchema,
+  exportDraftResponseSchema,
+  healthResponseSchema,
+  sendJobSchema,
+  workspaceContextResponseSchema,
+} from "./api";
 
 describe("api contracts", () => {
   it("accepts the standard health response", () => {
@@ -50,5 +56,66 @@ describe("api contracts", () => {
     });
 
     expect(result.workspace.slug).toBe("acme");
+  });
+
+  it("accepts a completed send job", () => {
+    const result = sendJobSchema.parse({
+      id: crypto.randomUUID(),
+      workspaceId: crypto.randomUUID(),
+      draftId: crypto.randomUUID(),
+      draftVersionId: crypto.randomUUID(),
+      deliveryAccountId: crypto.randomUUID(),
+      provider: "gmail_draft",
+      status: "completed",
+      providerRef: "draft-abc",
+      error: null,
+      attempts: 1,
+      requestedByClerkUserId: "user_123",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    expect(result.status).toBe("completed");
+  });
+
+  it("accepts an export response with a resolved account email", () => {
+    const result = exportDraftResponseSchema.parse({
+      id: crypto.randomUUID(),
+      workspaceId: crypto.randomUUID(),
+      draftId: crypto.randomUUID(),
+      draftVersionId: crypto.randomUUID(),
+      deliveryAccountId: null,
+      provider: "manual_export",
+      status: "completed",
+      providerRef: null,
+      error: null,
+      attempts: 1,
+      requestedByClerkUserId: "user_123",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      externalAccountEmail: null,
+    });
+
+    expect(result.provider).toBe("manual_export");
+  });
+
+  it("rejects an unknown delivery provider key", () => {
+    expect(() =>
+      sendJobSchema.parse({
+        id: crypto.randomUUID(),
+        workspaceId: crypto.randomUUID(),
+        draftId: crypto.randomUUID(),
+        draftVersionId: crypto.randomUUID(),
+        deliveryAccountId: null,
+        provider: "carrier_pigeon",
+        status: "completed",
+        providerRef: null,
+        error: null,
+        attempts: 1,
+        requestedByClerkUserId: "user_123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    ).toThrow();
   });
 });

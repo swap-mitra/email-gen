@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { createApiErrorResponse } from "@/lib/api";
 import { draftSchema, knowledgeItemSchema } from "@/lib/contracts/api";
-import { drafts, draftVersions, knowledgeItems } from "@/db/schema";
+import { drafts, draftVersions, knowledgeItems, sendJobs } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
@@ -70,9 +70,19 @@ export async function GET(
       evidence = items.map((item) => knowledgeItemSchema.parse(item));
     }
 
-    const payload = draftSchema.parse({ ...draft, latestVersion });
+    const latestSendJob = await db.query.sendJobs.findFirst({
+      where: eq(sendJobs.draftId, id),
+      orderBy: [desc(sendJobs.createdAt)],
+      with: { deliveryAccount: true },
+    });
 
-    return NextResponse.json({ ...payload, evidence });
+    const payload = draftSchema.parse({ ...draft, latestVersion, latestSendJob: latestSendJob ?? null });
+
+    return NextResponse.json({
+      ...payload,
+      evidence,
+      latestSendJobAccountEmail: latestSendJob?.deliveryAccount?.externalAccountEmail ?? null,
+    });
   } catch (error) {
     return createApiErrorResponse({
       code: "internal_error",

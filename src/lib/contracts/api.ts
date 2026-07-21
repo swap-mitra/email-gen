@@ -112,6 +112,39 @@ export const knowledgeItemSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Delivery / send jobs
+// ---------------------------------------------------------------------------
+
+export const deliveryProviderKeySchema = z.enum(["gmail_draft", "manual_export"]);
+export const sendJobStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+
+export const sendJobSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  draftId: z.string().uuid(),
+  draftVersionId: z.string().uuid(),
+  deliveryAccountId: z.string().uuid().nullable(),
+  provider: deliveryProviderKeySchema,
+  status: sendJobStatusSchema,
+  providerRef: z.string().nullable(),
+  error: z.string().nullable(),
+  attempts: z.number().int(),
+  requestedByClerkUserId: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const exportDraftRequestSchema = z.object({
+  /** Defaults to "gmail_draft" when omitted. */
+  provider: deliveryProviderKeySchema.optional(),
+});
+
+export const exportDraftResponseSchema = sendJobSchema.extend({
+  /** Resolved external account address, for display only. */
+  externalAccountEmail: z.string().nullable(),
+});
+
+// ---------------------------------------------------------------------------
 // Drafts & versions
 // ---------------------------------------------------------------------------
 
@@ -150,6 +183,9 @@ export const draftSchema = z.object({
   generationError: z.string().nullable(),
   /** The most recent version, if any has been generated. */
   latestVersion: draftVersionSchema.nullable(),
+  /** Most recent export attempt, if any — optional so list/create routes
+   * that don't fetch it keep parsing unchanged. */
+  latestSendJob: sendJobSchema.nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -246,5 +282,10 @@ export type DraftListItemResponse = z.infer<typeof draftListItemSchema>;
 export type DraftListResponse = z.infer<typeof draftListResponseSchema>;
 export type ApproveDraftRequest = z.infer<typeof approveDraftRequestSchema>;
 export type ApprovalResponse = z.infer<typeof approvalSchema>;
+export type DeliveryProviderKeyValue = z.infer<typeof deliveryProviderKeySchema>;
+export type SendJobStatus = z.infer<typeof sendJobStatusSchema>;
+export type SendJobResponse = z.infer<typeof sendJobSchema>;
+export type ExportDraftRequest = z.infer<typeof exportDraftRequestSchema>;
+export type ExportDraftResponse = z.infer<typeof exportDraftResponseSchema>;
 export type ActivityResponse = z.infer<typeof activitySchema>;
 export type ActivitiesResponse = z.infer<typeof activitiesResponseSchema>;
