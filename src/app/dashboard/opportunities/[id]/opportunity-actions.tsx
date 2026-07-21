@@ -28,7 +28,7 @@ export function OpportunityActions({
   ingestStatus: string;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<"reingest" | "generate" | null>(null);
+  const [busy, setBusy] = useState<"reingest" | "generate" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleReingest() {
@@ -42,6 +42,29 @@ export function OpportunityActions({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to restart ingestion.");
     } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("Delete this opportunity? Its drafts and approvals are deleted too. This can't be undone.")) {
+      return;
+    }
+    setError(null);
+    setBusy("delete");
+    try {
+      const res = await fetch(`/api/v1/opportunities/${opportunityId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(
+          (body as { error?: { message?: string } })?.error?.message ??
+            `Request failed (HTTP ${res.status}).`,
+        );
+      }
+      router.push("/dashboard/opportunities");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete opportunity.");
       setBusy(null);
     }
   }
@@ -66,7 +89,6 @@ export function OpportunityActions({
 
   const canReingest = ingestStatus === "failed" || ingestStatus === "completed";
   const canGenerate = ingestStatus === "completed";
-  if (!canReingest && !canGenerate) return null;
 
   return (
     <>
@@ -86,6 +108,9 @@ export function OpportunityActions({
             {busy === "reingest" ? "Restarting…" : ingestStatus === "failed" ? "Retry ingestion" : "Re-ingest source"}
           </button>
         )}
+        <button className="btn btn-danger" onClick={handleDelete} disabled={busy !== null}>
+          {busy === "delete" ? "Deleting…" : "Delete opportunity"}
+        </button>
       </div>
     </>
   );

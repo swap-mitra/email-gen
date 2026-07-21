@@ -256,6 +256,16 @@ a {
   border-color: var(--ink);
 }
 
+.btn-danger {
+  background: var(--white);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover {
+  box-shadow: 4px 4px 0 var(--danger);
+}
+
 /* ---------------------------------------------------------------------------
    Theme toggle
    --------------------------------------------------------------------------- */

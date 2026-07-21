@@ -57,3 +57,58 @@ export async function GET(
     });
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const context = await getActiveWorkspaceContext();
+
+    if (!context.userId) {
+      return createApiErrorResponse({
+        code: "unauthorized",
+        message: "Authentication is required.",
+        status: 401,
+      });
+    }
+
+    if (!context.workspace) {
+      return createApiErrorResponse({
+        code: "forbidden",
+        message: "An active workspace is required.",
+        status: 403,
+      });
+    }
+
+    const { id } = await params;
+    const db = getDb();
+
+    const existing = await db.query.opportunities.findFirst({
+      where: and(
+        eq(opportunities.id, id),
+        eq(opportunities.workspaceId, context.workspace.id),
+      ),
+    });
+
+    if (!existing) {
+      return createApiErrorResponse({
+        code: "not_found",
+        message: "Opportunity not found.",
+        status: 404,
+      });
+    }
+
+    // Drafts, draft versions, and approvals cascade off the opportunity row.
+    await db.delete(opportunities).where(eq(opportunities.id, id));
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return createApiErrorResponse({
+      code: "internal_error",
+      message: error instanceof Error ? error.message : "Failed to delete opportunity.",
+      status: 500,
+      cause: error,
+    });
+  }
+}
