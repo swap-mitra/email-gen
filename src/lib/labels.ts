@@ -55,6 +55,18 @@ export function formatFieldKey(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+// Ingestion bookkeeping, not review-worthy content: sourceUrl is already
+// shown above the fields grid, the rest duplicates extractionMeta.
+const INTERNAL_FIELD_KEYS = new Set([
+  "sourceUrl",
+  "extractedTextLength",
+  "extractedAt",
+  "excerpt",
+  "aiExtracted",
+]);
+
+const MAX_FIELD_VALUE_LENGTH = 240;
+
 /** Flatten extracted fields into displayable [label, value] pairs, skipping nested objects. */
 export function displayableFields(
   fields: Record<string, unknown> | null | undefined,
@@ -63,6 +75,7 @@ export function displayableFields(
   if (!fields) return [];
   const pairs: [string, string][] = [];
   for (const [key, value] of Object.entries(fields)) {
+    if (INTERNAL_FIELD_KEYS.has(key)) continue;
     let rendered: string | null = null;
     if (typeof value === "string") rendered = value;
     else if (typeof value === "number" || typeof value === "boolean") rendered = String(value);
@@ -70,7 +83,13 @@ export function displayableFields(
       rendered = (value as string[]).join(", ");
     }
     if (rendered && rendered.trim().length > 0) {
-      pairs.push([formatFieldKey(key), rendered.trim()]);
+      const trimmed = rendered.trim();
+      pairs.push([
+        formatFieldKey(key),
+        trimmed.length > MAX_FIELD_VALUE_LENGTH
+          ? `${trimmed.slice(0, MAX_FIELD_VALUE_LENGTH)}…`
+          : trimmed,
+      ]);
     }
     if (pairs.length >= max) break;
   }
