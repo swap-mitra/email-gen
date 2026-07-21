@@ -8,6 +8,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -231,6 +232,113 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ---------------------------------------------------------------------------
+// Delivery accounts
+// Thin, lazily-written audit/display record of which external account (e.g.
+// Gmail address) a workspace member last exported to. Clerk owns the actual
+// OAuth connection and token refresh — this table is for display/audit only.
+// ---------------------------------------------------------------------------
+
+export const deliveryAccounts = pgTable(
+  "delivery_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    clerkUserId: text("clerk_user_id").notNull(),
+
+    /** Mirrors DeliveryProviderKey. Only "gmail_draft" writes rows here. */
+    provider: text("provider").notNull(),
+
+    /** Resolved external account address, for audit/display only. */
+    externalAccountEmail: text("external_account_email"),
+
+    /** Timestamp of the most recent successful export via this account. */
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceUserProviderUnique: unique("delivery_accounts_workspace_user_provider_key").on(
+      table.workspaceId,
+      table.clerkUserId,
+      table.provider,
+    ),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Send jobs
+// One row per export attempt, pinned to the exact draft version exported.
+// ---------------------------------------------------------------------------
+
+export const sendJobs = pgTable("send_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  draftId: uuid("draft_id")
+    .notNull()
+    .references(() => drafts.id, { onDelete: "cascade" }),
+  draftVersionId: uuid("draft_version_id")
+    .notNull()
+    .references(() => draftVersions.id, { onDelete: "cascade" }),
+  deliveryAccountId: uuid("delivery_account_id").references(() => deliveryAccounts.id, {
+    onDelete: "set null",
+  }),
+
+  /** Mirrors DeliveryProviderKey ("gmail_draft" | "manual_export"). */
+  provider: text("provider").notNull(),
+
+  /**
+   * Job status lifecycle:
+   *   pending → running → completed | failed
+   */
+  status: text("status").notNull().default("pending"),
+
+  /** External reference returned by the provider (e.g. Gmail draft ID). */
+  providerRef: text("provider_ref"),
+
+  /** Human-readable failure reason when status = 'failed'. */
+  error: text("error"),
+
+  /** Number of attempts recorded in send_attempts for this job. */
+  attempts: integer("attempts").notNull().default(0),
+
+  /** Clerk user ID of the person who triggered this export. */
+  requestedByClerkUserId: text("requested_by_clerk_user_id").notNull(),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Send attempts
+// Append-only log of each individual provider call underneath a send job.
+// ---------------------------------------------------------------------------
+
+export const sendAttempts = pgTable("send_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sendJobId: uuid("send_job_id")
+    .notNull()
+    .references(() => sendJobs.id, { onDelete: "cascade" }),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+
+  /** Sequential attempt number within the job (1-based). */
+  attemptNumber: integer("attempt_number").notNull(),
+
+  /** Terminal outcome of this specific provider call: succeeded | failed */
+  status: text("status").notNull(),
+
+  providerRef: text("provider_ref"),
+  error: text("error"),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 // ---------------------------------------------------------------------------
 // Relations (TypeScript-only, no DDL)
@@ -244,6 +352,8 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
   draftVersions: many(draftVersions),
   approvals: many(approvals),
   activities: many(activities),
+  deliveryAccounts: many(deliveryAccounts),
+  sendJobs: many(sendJobs),
 }));
 
 export const workspaceMembershipsRelations = relations(workspaceMemberships, ({ one }) => ({
@@ -279,9 +389,10 @@ export const draftsRelations = relations(drafts, ({ one, many }) => ({
   }),
   versions: many(draftVersions),
   approvals: many(approvals),
+  sendJobs: many(sendJobs),
 }));
 
-export const draftVersionsRelations = relations(draftVersions, ({ one }) => ({
+export const draftVersionsRelations = relations(draftVersions, ({ one, many }) => ({
   draft: one(drafts, {
     fields: [draftVersions.draftId],
     references: [drafts.id],
@@ -290,6 +401,7 @@ export const draftVersionsRelations = relations(draftVersions, ({ one }) => ({
     fields: [draftVersions.workspaceId],
     references: [workspaces.id],
   }),
+  sendJobs: many(sendJobs),
 }));
 
 export const approvalsRelations = relations(approvals, ({ one }) => ({
@@ -314,6 +426,45 @@ export const activitiesRelations = relations(activities, ({ one }) => ({
   }),
 }));
 
+export const deliveryAccountsRelations = relations(deliveryAccounts, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [deliveryAccounts.workspaceId],
+    references: [workspaces.id],
+  }),
+  sendJobs: many(sendJobs),
+}));
+
+export const sendJobsRelations = relations(sendJobs, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [sendJobs.workspaceId],
+    references: [workspaces.id],
+  }),
+  draft: one(drafts, {
+    fields: [sendJobs.draftId],
+    references: [drafts.id],
+  }),
+  draftVersion: one(draftVersions, {
+    fields: [sendJobs.draftVersionId],
+    references: [draftVersions.id],
+  }),
+  deliveryAccount: one(deliveryAccounts, {
+    fields: [sendJobs.deliveryAccountId],
+    references: [deliveryAccounts.id],
+  }),
+  attempts: many(sendAttempts),
+}));
+
+export const sendAttemptsRelations = relations(sendAttempts, ({ one }) => ({
+  sendJob: one(sendJobs, {
+    fields: [sendAttempts.sendJobId],
+    references: [sendJobs.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [sendAttempts.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
@@ -326,3 +477,6 @@ export type Draft = typeof drafts.$inferSelect;
 export type DraftVersion = typeof draftVersions.$inferSelect;
 export type Approval = typeof approvals.$inferSelect;
 export type Activity = typeof activities.$inferSelect;
+export type DeliveryAccount = typeof deliveryAccounts.$inferSelect;
+export type SendJob = typeof sendJobs.$inferSelect;
+export type SendAttempt = typeof sendAttempts.$inferSelect;
