@@ -1,12 +1,19 @@
 import { CreateOrganization } from "@clerk/nextjs";
+import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
-import { listRecentActivities } from "@/lib/activity";
-import { formatActivityKind } from "@/lib/labels";
+import { drafts, draftVersions, opportunities } from "@/db/schema";
+import { getDb } from "@/lib/db";
+import { opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
-import { OpportunityWorkflow } from "./opportunity-workflow";
+import { NewOpportunityForm } from "./new-opportunity-form";
 
 export const dynamic = "force-dynamic";
 
+type Attention = {
+  href: string;
+  title: string;
+  reason: string;
+};
 
 export default async function DashboardPage() {
   const context = await getActiveWorkspaceContext();
@@ -30,94 +37,105 @@ export default async function DashboardPage() {
     );
   }
 
-  const activities = await listRecentActivities(context.workspace.id, 8);
+  const db = getDb();
+  const [opportunityRows, draftRows] = await Promise.all([
+    db
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.workspaceId, context.workspace.id))
+      .orderBy(desc(opportunities.createdAt))
+      .limit(100),
+    db.query.drafts.findMany({
+      where: eq(drafts.workspaceId, context.workspace.id),
+      with: {
+        versions: { orderBy: [desc(draftVersions.versionNumber)], limit: 1 },
+      },
+      orderBy: [desc(drafts.updatedAt)],
+      limit: 100,
+    }),
+  ]);
+
+  const ingestingCount = opportunityRows.filter(
+    (o) => o.ingestStatus === "pending" || o.ingestStatus === "running",
+  ).length;
+  const awaitingApprovalCount = draftRows.filter(
+    (d) => d.generationStatus === "completed" && d.state !== "approved_for_send",
+  ).length;
+  const approvedCount = draftRows.filter((d) => d.state === "approved_for_send").length;
+
+  const attention: Attention[] = [
+    ...opportunityRows
+      .filter((o) => o.ingestStatus === "failed")
+      .slice(0, 5)
+      .map((o) => ({
+        href: `/dashboard/opportunities/${o.id}`,
+        title: opportunityTitle(o.normalizedFields, urlHost(o.sourceUrl)),
+        reason: o.ingestError ?? "Ingestion failed",
+      })),
+    ...draftRows
+      .filter((d) => d.generationStatus === "failed")
+      .slice(0, 5)
+      .map((d) => ({
+        href: `/dashboard/drafts/${d.id}`,
+        title: d.versions[0]?.subject ?? `Draft ${d.id.slice(0, 8)}`,
+        reason: d.generationError ?? "Draft generation failed",
+      })),
+  ].slice(0, 5);
 
   return (
     <>
-      {/* ── Workspace status bar ──────────────────────────────────── */}
-      <div className="ws-bar">
-        <div className="ws-bar-name">
-          <h1>{context.workspace.name}</h1>
-          <p>ACTIVE WORKSPACE</p>
+      <div className="page-head">
+        <div>
+          <p className="t-label page-kicker">Overview</p>
+          <h1 className="page-title">{context.workspace.name}</h1>
         </div>
-        <div className="ws-bar-stat">
-          <span className="ws-bar-stat-label">Workspace ID</span>
-          <span className="ws-bar-stat-value">{context.workspace.id.slice(0, 8)}…</span>
-        </div>
-        <div className="ws-bar-stat">
-          <span className="ws-bar-stat-label">Org slug</span>
-          <span className="ws-bar-stat-value">{context.workspace.slug}</span>
-        </div>
-        <div className="ws-bar-stat">
-          <span className="ws-bar-stat-label">Your role</span>
-          <span className="ws-bar-stat-value">{context.membership.role}</span>
-        </div>
+        <span className="opp-badge">{context.membership.role}</span>
       </div>
 
-      {/* ── Main grid ─────────────────────────────────────────────── */}
-      <div className="dash-grid">
+      <div className="dash-block-card">
+        <h2 className="block-title">New opportunity</h2>
+        <NewOpportunityForm />
+      </div>
 
-        {/* Quick-start */}
-        <div className="dash-block">
-          <h2>Get started</h2>
-          <ul className="feature-list">
-            <li>Submit a job or company URL below to create your first opportunity</li>
-            <li>
-              Ground the message in your team&apos;s proof points — add them in the{" "}
-              <Link href="/dashboard/knowledge">knowledge hub</Link>
-            </li>
-            <li>
-              Review and approve drafts in the <Link href="/dashboard/approvals">approval queue</Link>
-            </li>
-            <li>
-              Track every opportunity on the{" "}
-              <Link href="/dashboard/opportunities">opportunities page</Link>
-            </li>
-          </ul>
-        </div>
+      <div className="stat-grid">
+        <Link className="stat-tile" href="/dashboard/opportunities">
+          <span className="stat-value">{opportunityRows.length}</span>
+          <span className="stat-label">Opportunities</span>
+        </Link>
+        <Link className="stat-tile" href="/dashboard/opportunities">
+          <span className="stat-value">{ingestingCount}</span>
+          <span className="stat-label">Ingesting now</span>
+        </Link>
+        <Link className="stat-tile" href="/dashboard/approvals">
+          <span className="stat-value">{awaitingApprovalCount}</span>
+          <span className="stat-label">Awaiting approval</span>
+        </Link>
+        <Link className="stat-tile" href="/dashboard/drafts">
+          <span className="stat-value">{approvedCount}</span>
+          <span className="stat-label">Approved</span>
+        </Link>
+      </div>
 
-        {/* Workspace info */}
-        <div className="dash-block">
-          <h2>Workspace</h2>
-          <ul className="feature-list">
-            <li>Isolated tenant — all data scoped to your organization</li>
-            <li>Role-based access — invite teammates and assign reviewers</li>
-            <li>Full audit trail tied to every draft and approval</li>
-          </ul>
-        </div>
-
-        {/* New opportunity — full width */}
-        <div className="dash-block-full">
-          <h2>New opportunity</h2>
-          <OpportunityWorkflow />
-        </div>
-
-        {/* Activity log — full width */}
-        <div className="dash-block-full">
-          <h2>Recent activity</h2>
-          {activities.length === 0 ? (
-            <p className="activity-empty">No activity recorded yet — create an opportunity to get started.</p>
-          ) : (
-            <ul className="activity-feed">
-              {activities.map((activity) => (
-                <li key={activity.id}>
-                  <span className="activity-kind">{formatActivityKind(activity.kind)}</span>
-                  <span className="activity-entity" title={activity.entityId}>
-                    {activity.entityType} · {activity.entityId.slice(0, 8)}
+      {attention.length > 0 && (
+        <div className="dash-block-card">
+          <h2 className="block-title">Needs attention</h2>
+          <ul className="attention-list">
+            {attention.map((item) => (
+              <li key={item.href}>
+                <Link className="attention-link" href={item.href}>
+                  <span className="attention-item-main">
+                    <span className="attention-item-title">{item.title}</span>
+                    <span className="attention-item-reason">{item.reason}</span>
                   </span>
-                  <time className="activity-time" dateTime={activity.createdAt.toISOString()}>
-                    {activity.createdAt.toLocaleString("en-US", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </time>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <span className="attention-item-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-
-      </div>
+      )}
     </>
   );
 }
