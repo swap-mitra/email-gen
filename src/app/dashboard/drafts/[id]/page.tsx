@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { approvals, drafts, draftVersions, knowledgeItems, opportunities } from "@/db/schema";
+import { approvals, drafts, draftVersions, knowledgeItems, opportunities, sendJobs } from "@/db/schema";
 import { resolveClerkUserName } from "@/lib/clerk-users";
 import { getDb } from "@/lib/db";
 import { formatDateTime, opportunityTitle, urlHost } from "@/lib/labels";
@@ -33,7 +33,7 @@ export default async function DraftEditorPage({
 
   const latestVersion = draft.versions[0] ?? null;
 
-  const [opportunity, evidence, approval] = await Promise.all([
+  const [opportunity, evidence, approval, latestSendJob] = await Promise.all([
     db.query.opportunities.findFirst({
       where: and(
         eq(opportunities.id, draft.opportunityId),
@@ -58,6 +58,11 @@ export default async function DraftEditorPage({
     db.query.approvals.findFirst({
       where: and(eq(approvals.draftId, id), eq(approvals.workspaceId, context.workspace.id)),
       orderBy: [desc(approvals.createdAt)],
+    }),
+    db.query.sendJobs.findFirst({
+      where: eq(sendJobs.draftId, id),
+      orderBy: [desc(sendJobs.createdAt)],
+      with: { deliveryAccount: true },
     }),
   ]);
 
@@ -136,6 +141,15 @@ export default async function DraftEditorPage({
             createdAt: latestVersion.createdAt.toISOString(),
           }}
           evidence={evidence}
+          initialExport={
+            latestSendJob
+              ? {
+                  status: latestSendJob.status,
+                  error: latestSendJob.error,
+                  externalAccountEmail: latestSendJob.deliveryAccount?.externalAccountEmail ?? null,
+                }
+              : null
+          }
         />
       )}
 

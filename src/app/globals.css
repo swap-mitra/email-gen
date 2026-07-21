@@ -240,6 +240,16 @@ a {
   box-shadow: none;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-primary {
   background: var(--yellow);
   color: var(--on-yellow);

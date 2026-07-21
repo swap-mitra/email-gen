@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import type { DraftVersionResponse } from "@/lib/contracts/api";
+import type { DraftVersionResponse, ExportDraftResponse } from "@/lib/contracts/api";
 
 type VersionView = {
   versionNumber: number;
@@ -17,6 +17,17 @@ type EvidenceItem = {
   title: string;
   content: string;
 };
+
+type ExportView = {
+  status: string;
+  error: string | null;
+  externalAccountEmail: string | null;
+};
+
+// Gmail export needs manual Google Cloud + Clerk OAuth setup (see the
+// project's delivery spec) before it can work — keep the button visible but
+// disabled until that's done.
+const GMAIL_EXPORT_DISABLED = true;
 
 async function readJson(res: Response) {
   let body: unknown;
@@ -39,11 +50,13 @@ export function DraftEditor({
   state,
   initialVersion,
   evidence,
+  initialExport,
 }: {
   draftId: string;
   state: string;
   initialVersion: VersionView;
   evidence: EvidenceItem[];
+  initialExport: ExportView | null;
 }) {
   const router = useRouter();
   const [version, setVersion] = useState<VersionView>(initialVersion);
@@ -54,6 +67,11 @@ export function DraftEditor({
   const [approveNote, setApproveNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<string | null>(initialExport?.status ?? null);
+  const [exportedEmail, setExportedEmail] = useState<string | null>(
+    initialExport?.externalAccountEmail ?? null,
+  );
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,6 +131,29 @@ export function DraftEditor({
       setError(err instanceof Error ? err.message : "Failed to approve draft.");
     } finally {
       setIsApproving(false);
+    }
+  }
+
+  async function handleExport() {
+    setError(null);
+    setIsExporting(true);
+
+    try {
+      const exported = (await readJson(
+        await fetch(`/api/v1/drafts/${draftId}/export`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }),
+      )) as ExportDraftResponse;
+      setExportStatus("completed");
+      setExportedEmail(exported.externalAccountEmail);
+      router.refresh();
+    } catch (err) {
+      setExportStatus("failed");
+      setError(err instanceof Error ? err.message : "Failed to export draft to Gmail.");
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -198,6 +239,14 @@ export function DraftEditor({
               </div>
             )}
 
+            {isApproved && exportStatus === "completed" && (
+              <p className="opp-hint">
+                {exportedEmail
+                  ? `Exported to Gmail (${exportedEmail}) — open Gmail to review and send it.`
+                  : "Exported to Gmail — open Gmail to review and send it."}
+              </p>
+            )}
+
             {error && <p className="opp-error">{error}</p>}
 
             <div className="opp-draft-actions">
@@ -209,6 +258,23 @@ export function DraftEditor({
               {!isApproved && (
                 <button className="btn btn-secondary" onClick={handleStartEditing}>
                   Edit draft
+                </button>
+              )}
+              {isApproved && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleExport}
+                  // Gated off until the Gmail delivery setup (Google Cloud +
+                  // Clerk custom OAuth credentials) is complete — remove the
+                  // GMAIL_EXPORT_DISABLED check to turn this back on.
+                  disabled={GMAIL_EXPORT_DISABLED || isExporting}
+                  title={GMAIL_EXPORT_DISABLED ? "Gmail export support coming soon" : undefined}
+                >
+                  {isExporting
+                    ? "Exporting…"
+                    : exportStatus === "completed"
+                      ? "Re-export to Gmail"
+                      : "Export to Gmail"}
                 </button>
               )}
               <button className="btn btn-secondary" onClick={handleCopy}>
