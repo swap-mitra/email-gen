@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { approvals, drafts, draftVersions, knowledgeItems, opportunities } from "@/db/schema";
+import { resolveClerkUserName } from "@/lib/clerk-users";
 import { getDb } from "@/lib/db";
 import { formatDateTime, opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
@@ -59,6 +60,8 @@ export default async function DraftEditorPage({
       orderBy: [desc(approvals.createdAt)],
     }),
   ]);
+
+  const reviewerName = approval ? await resolveClerkUserName(approval.reviewerClerkUserId) : null;
 
   const isGenerating =
     draft.generationStatus === "pending" || draft.generationStatus === "running";
@@ -138,7 +141,7 @@ export default async function DraftEditorPage({
 
       {approval && (
         <p className="approval-record">
-          Approved by <span className="t-mono">{approval.reviewerClerkUserId}</span> on{" "}
+          Approved by <strong>{reviewerName}</strong> on{" "}
           {formatDateTime(approval.createdAt)}
           {approval.note ? <> — “{approval.note}”</> : null}
         </p>
