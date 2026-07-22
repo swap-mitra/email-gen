@@ -3,6 +3,13 @@ import { fetchAndExtractContent, extractNormalizedFields } from "@/lib/ingestion
 import { persistRawHtmlArtifact } from "@/lib/ingestion/persist-artifact";
 import { browserbaseFetch } from "@/lib/ingestion/browser-fallback";
 
+// fetchAndExtractContent resolves the hostname (SSRF guard) before fetching —
+// stub DNS so these tests don't depend on real network/DNS availability.
+vi.mock("node:dns", () => {
+  const promises = { lookup: vi.fn().mockResolvedValue([{ address: "93.184.216.34", family: 4 }]) };
+  return { promises, default: { promises } };
+});
+
 // ---------------------------------------------------------------------------
 // fetch-content.ts unit tests
 // ---------------------------------------------------------------------------

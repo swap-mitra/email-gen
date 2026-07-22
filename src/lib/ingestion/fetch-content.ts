@@ -1,7 +1,9 @@
 import * as cheerio from "cheerio";
+import { assertPublicHttpUrl } from "./url-safety";
 
 const FETCH_TIMEOUT_MS = 15_000;
 const MIN_CONTENT_LENGTH = 400; // chars — below this triggers browser fallback
+const MAX_REDIRECTS = 5;
 
 /**
  * Result of a content extraction attempt against a URL.
@@ -27,15 +29,38 @@ export type FetchedContent = {
  *  4. Return isInsufficient=true when text is too short → triggers Playwright fallback.
  */
 export async function fetchAndExtractContent(url: string): Promise<FetchedContent> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (compatible; EmailGenAI/1.0; +https://emailgenai.com/bot)",
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  // Manual redirect handling: each hop is re-validated against
+  // assertPublicHttpUrl so a public URL can't 302 into an internal address
+  // (the most common real-world SSRF bypass).
+  let currentUrl = url;
+  let response: Response | undefined;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    await assertPublicHttpUrl(currentUrl);
+
+    response = await fetch(currentUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; EmailGenAI/1.0; +https://emailgenai.com/bot)",
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) break;
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+    break;
+  }
+
+  if (!response) {
+    throw new Error("Failed to fetch the source URL.");
+  }
 
   const rawHtml = await response.text();
   const $ = cheerio.load(rawHtml);
