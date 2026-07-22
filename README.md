@@ -16,6 +16,7 @@ The project is built around one principle: **agentic drafting should be observab
 - [Local Development](#local-development)
 - [Background Workflows (Inngest)](#background-workflows-inngest)
 - [AI Configuration](#ai-configuration)
+- [Authentication (Better-Auth)](#authentication-better-auth)
 - [Gmail Export (Delivery)](#gmail-export-delivery)
 - [Rate Limits & Abuse Protection](#rate-limits--abuse-protection)
 - [Production Deployment](#production-deployment)
@@ -90,7 +91,7 @@ sequenceDiagram
   Reviewer->>API: POST /api/v1/drafts/:id/approve
   opt Export to Gmail
     Reviewer->>API: POST /api/v1/drafts/:id/export
-    API->>Gmail: create draft via Clerk-issued OAuth token
+    API->>Gmail: create draft via Better-Auth-issued OAuth token
     Gmail-->>API: draft id
   end
 ```
@@ -105,14 +106,14 @@ Ingestion and drafts each carry their own status machine:
 
 The schema lives at [`src/db/schema.ts`](src/db/schema.ts).
 
-Key roles (Clerk-backed, per workspace):
+Key roles (Better-Auth organization plugin, per workspace):
 
-- `org:member`: can create opportunities, generate drafts, revise, approve, and export.
-- `org:admin`: everything a member can do, plus managing knowledge items and workspace settings.
+- `member`: can create opportunities, generate drafts, revise, approve, and export.
+- `owner` / `admin`: everything a member can do, plus managing knowledge items and workspace members.
 
 Core entities:
 
-- `Workspace` / `WorkspaceMembership` — tenancy boundary; every business row carries `workspaceId`, and cross-workspace access is rejected at the API layer.
+- `Workspace` — a thin uuid-keyed mirror of Better-Auth's `organization` table; membership/role is sourced live from Better-Auth's own `member` table, not mirrored locally. Every business row carries `workspaceId`, and cross-workspace access is rejected at the API layer.
 - `Opportunity` — the normalized source of truth for one lead/job, with raw content, extraction metadata, and ingest status.
 - `KnowledgeItem` — a proof point or case study, embedded for retrieval.
 - `Draft` / `DraftVersion` — `DraftVersion` is append-only; every revision is a new row, never an overwrite.
@@ -144,7 +145,7 @@ flowchart TB
   subgraph External["External systems"]
     openrouter["OpenRouter\nextraction / generation / embeddings"]
     browserbase["Browserbase\nJS-rendered fallback"]
-    gmail["Gmail API\nper-user OAuth via Clerk"]
+    gmail["Gmail API\nper-user OAuth via Better-Auth"]
   end
 
   subgraph Observability["Operator visibility"]
@@ -182,9 +183,9 @@ The dashboard and API routes can request AI generation and Gmail export, but eve
 - URL ingestion with static-page fetch plus Playwright/Browserbase fallback for JS-rendered pages
 - AI extraction, hybrid retrieval (metadata + lexical + vector + RRF + MMR), and grounded draft generation via OpenRouter
 - pgvector `halfvec` HNSW index for knowledge-item embeddings
-- Clerk-backed auth, organizations, and workspace tenancy
+- Self-hosted Google-only auth (Better-Auth) with an organization plugin for workspace tenancy — no separate hosted identity domain to register
 - Append-only draft versions with human revision and reviewer-attributed approval
-- Gmail draft export behind a swappable delivery-provider interface (ships disabled pending Google Cloud/Clerk OAuth setup)
+- Gmail draft export behind a swappable delivery-provider interface (ships disabled pending Google Cloud OAuth client setup)
 - SSRF guard on every ingested URL and redirect hop
 - Durable, per-workspace rate limiting on costly/abusable actions
 - Admin-only enforcement on knowledge-item management
@@ -245,16 +246,23 @@ OPENROUTER_EMBEDDING_MODEL=
 
 See [`docs/specs/004-ai-retrieval-spec.md`](docs/specs/004-ai-retrieval-spec.md) for the current default models, why embeddings are indexed as `halfvec` instead of `vector`, and the JSON-repair retry strategy used against free-tier models with unreliable structured-output support.
 
+## Authentication (Better-Auth)
+
+Sign-in is Google-only, self-hosted via [Better-Auth](https://www.better-auth.com) — no separate hosted identity domain to register, so there's nothing to fail when deploying to a new domain. Workspaces are Better-Auth's own `organization` plugin (see [Domain Model](#domain-model)).
+
+Google Cloud Console setup (required for sign-in to work at all):
+
+1. Create or select a Google Cloud project. Enable the **Gmail API** (APIs & Services → Library) — required for the Gmail export feature below, not just for requesting the scope.
+2. **OAuth consent screen**: type "External"; add scopes `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`, and `https://www.googleapis.com/auth/gmail.compose` (the last one is what Gmail export needs — requested up front at sign-in since it's the same Google account either way).
+   - `gmail.compose` is a Google *restricted* scope. While the consent screen is in "Testing" status, only Google accounts explicitly added as test users (~100 cap) can sign in at all — anyone else is blocked by Google, not by this app. Moving to "In production" with this scope requires Google's app verification and a CASA security assessment. Stay in Testing with your team's accounts added as test users until you're actually ready to publish.
+3. **Credentials → Create OAuth client ID** (type "Web application"). Authorized JavaScript origins: `http://localhost:3000` (dev) and your deployed origin (prod). Authorized redirect URIs: `http://localhost:3000/api/auth/callback/google` (dev) and `https://<your-domain>/api/auth/callback/google` (prod).
+4. Copy the Client ID/secret into `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
+
 ## Gmail Export (Delivery)
 
-Approved drafts can be exported into the reviewer's own Gmail drafts folder — never sent directly — via `POST /api/v1/drafts/:id/export`. The button ships disabled with a tooltip until this manual setup is done:
+Approved drafts can be exported into the reviewer's own Gmail drafts folder — never sent directly — via `POST /api/v1/drafts/:id/export`. The button ships disabled with a tooltip until `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set up per the section above — no separate delivery-specific setup is needed, since the `gmail.compose` scope is requested at sign-in.
 
-1. Enable the Gmail API in a Google Cloud project.
-2. Add the `gmail.compose` scope to the OAuth consent screen (and add test users while in "Testing" status).
-3. Create OAuth credentials and add them as custom credentials on Clerk's Google SSO connection.
-4. Anyone who linked Google to Clerk before this change must disconnect/reconnect to pick up the new scope.
-
-No new env vars are needed — the OAuth client lives in Clerk's dashboard; this app only talks to Google through Clerk's existing `CLERK_SECRET_KEY`. See [`docs/specs/010-future-delivery-spec.md`](docs/specs/010-future-delivery-spec.md) for the full rationale, including why this is a direct Gmail API integration today rather than the (Developer-Preview-gated) official Gmail MCP server.
+See [`docs/specs/010-future-delivery-spec.md`](docs/specs/010-future-delivery-spec.md) for the full rationale, including why this is a direct Gmail API integration today rather than the (Developer-Preview-gated) official Gmail MCP server.
 
 ## Rate Limits & Abuse Protection
 
@@ -276,11 +284,11 @@ Link the repository directly to Vercel — `git push` to `main` triggers a build
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint, typecheck, the full test suite, and a build on every push/PR — Vercel's own build step only runs `next build`'s type/lint pass, not this project's vitest suite.
 - **Database schema and indexes are never applied automatically.** Whenever `schema.ts` or `drizzle/*.sql` changes, run `npm run db:push && npm run db:indexes` by hand against the production database before or after deploying.
 
-Before going live: switch Clerk to production keys, register the app with Inngest Cloud and set `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` (leave `INNGEST_DEV` unset), and confirm production API keys for OpenRouter/Browserbase/Blob.
+Before going live: move the Google OAuth consent screen out of Testing (see [Authentication](#authentication-better-auth)), register the app with Inngest Cloud and set `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` (leave `INNGEST_DEV` unset), and confirm production API keys for OpenRouter/Browserbase/Blob.
 
 ## Security Notes
 
-- Keep Clerk, OpenRouter, Browserbase, and Blob keys out of git — `.env` is gitignored, only `.env.example` (blank values) is tracked.
+- Keep `BETTER_AUTH_SECRET`, Google OAuth, OpenRouter, Browserbase, and Blob keys out of git — `.env` is gitignored, only `.env.example` (blank values) is tracked.
 - Every ingested URL is checked against the SSRF guard, including on each redirect hop — no scheme other than `http`/`https`, no loopback/link-local/RFC1918 destination.
 - Every `/api/v1` route rejects requests without an authenticated user and an active workspace membership; cross-workspace access is denied at the query level, not just in the UI.
 - Knowledge-item creation requires the `org:admin` role; other actions are member-level by design.
