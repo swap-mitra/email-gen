@@ -1,13 +1,16 @@
-import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import {
   workspaces,
-  workspaceMemberships,
+  organization,
+  member,
   type Workspace,
-  type WorkspaceMembership,
 } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+
+type Membership = typeof member.$inferSelect;
 
 type ActiveWorkspaceContext =
   | {
@@ -26,13 +29,13 @@ type ActiveWorkspaceContext =
       userId: string;
       orgId: string;
       workspace: Workspace;
-      membership: WorkspaceMembership;
+      membership: Membership;
     };
 
 export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContext> {
-  const { userId, orgId, orgRole, orgSlug } = await auth();
+  const sessionData = await auth.api.getSession({ headers: await headers() });
 
-  if (!userId) {
+  if (!sessionData) {
     return {
       userId: null,
       orgId: null,
@@ -40,6 +43,10 @@ export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContex
       membership: null,
     };
   }
+
+  const userId = sessionData.user.id;
+  const orgId = (sessionData.session as { activeOrganizationId?: string | null })
+    .activeOrganizationId ?? null;
 
   if (!orgId) {
     return {
@@ -51,55 +58,49 @@ export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContex
   }
 
   const db = getDb();
-  const workspaceName = humanizeSlug(orgSlug ?? orgId);
   const now = new Date();
 
+  const org = await db.query.organization.findFirst({
+    where: eq(organization.id, orgId),
+  });
+
+  if (!org) {
+    throw new Error("Unable to resolve the active organization record.");
+  }
+
+  // Defensive lazy upsert of the local uuid-keyed mirror row — cheap and
+  // idempotent, keeps every domain table's workspaceId FK pointed at a
+  // stable uuid instead of Better-Auth's text organization id directly.
   await db
     .insert(workspaces)
     .values({
-      clerkOrganizationId: orgId,
-      name: workspaceName,
-      slug: orgSlug ?? orgId,
+      organizationId: org.id,
+      name: org.name,
+      slug: org.slug,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: workspaces.clerkOrganizationId,
+      target: workspaces.organizationId,
       set: {
-        slug: orgSlug ?? orgId,
-        name: workspaceName,
+        name: org.name,
+        slug: org.slug,
         updatedAt: now,
       },
     });
 
   const workspace = await db.query.workspaces.findFirst({
-    where: eq(workspaces.clerkOrganizationId, orgId),
+    where: eq(workspaces.organizationId, orgId),
   });
 
   if (!workspace) {
     throw new Error("Unable to resolve the active workspace record.");
   }
 
-  await db
-    .insert(workspaceMemberships)
-    .values({
-      workspaceId: workspace.id,
-      clerkUserId: userId,
-      role: orgRole ?? "org:member",
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [workspaceMemberships.workspaceId, workspaceMemberships.clerkUserId],
-      set: {
-        role: orgRole ?? "org:member",
-        updatedAt: now,
-      },
-    });
-
-  const membership = await db.query.workspaceMemberships.findFirst({
-    where: and(
-      eq(workspaceMemberships.workspaceId, workspace.id),
-      eq(workspaceMemberships.clerkUserId, userId),
-    ),
+  // Membership/role is sourced live from Better-Auth's own `member` table —
+  // no local mirror, since Better-Auth's organization plugin is now the
+  // sole owner of membership/role/invitation mutations.
+  const membership = await db.query.member.findFirst({
+    where: and(eq(member.organizationId, orgId), eq(member.userId, userId)),
   });
 
   if (!membership) {
@@ -110,12 +111,12 @@ export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContex
   if (createdAtAge < 5_000) {
     await recordActivity({
       workspaceId: workspace.id,
-      actorClerkUserId: userId,
+      actorUserId: userId,
       kind: "workspace.provisioned",
       entityType: "workspace",
       entityId: workspace.id,
       payload: {
-        clerkOrganizationId: orgId,
+        organizationId: orgId,
       },
     });
   }
@@ -126,12 +127,4 @@ export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContex
     workspace,
     membership,
   };
-}
-
-function humanizeSlug(value: string) {
-  return value
-    .split(/[-_]/g)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }

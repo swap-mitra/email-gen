@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 
 type RecordActivityInput = {
   workspaceId: string;
-  actorClerkUserId?: string | null;
+  actorUserId?: string | null;
   kind: string;
   entityType: string;
   entityId: string;
@@ -16,7 +16,7 @@ export async function recordActivity(input: RecordActivityInput) {
 
   await db.insert(activities).values({
     workspaceId: input.workspaceId,
-    actorClerkUserId: input.actorClerkUserId ?? null,
+    actorUserId: input.actorUserId ?? null,
     kind: input.kind,
     entityType: input.entityType,
     entityId: input.entityId,
