@@ -1,13 +1,33 @@
-import { clerkClient } from "@clerk/nextjs/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildMimeMessage, createGmailDraft } from "@/lib/delivery/gmail-client";
 import { getGoogleAccessToken } from "@/lib/delivery/google-token";
 import { DeliveryError } from "@/lib/delivery/errors";
 import { manualExportProvider } from "@/lib/delivery/providers/manual-export";
+import { auth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 
-vi.mock("@clerk/nextjs/server", () => ({
-  clerkClient: vi.fn(),
+vi.mock("@/lib/auth", () => ({
+  auth: { api: { getAccessToken: vi.fn() } },
 }));
+
+vi.mock("@/lib/db", () => ({
+  getDb: vi.fn(),
+}));
+
+function mockDb({
+  account,
+  user,
+}: {
+  account?: { scope: string | null } | undefined;
+  user?: { email: string | null } | undefined;
+}) {
+  vi.mocked(getDb).mockReturnValue({
+    query: {
+      account: { findFirst: vi.fn().mockResolvedValue(account) },
+      user: { findFirst: vi.fn().mockResolvedValue(user) },
+    },
+  } as never);
+}
 
 // ---------------------------------------------------------------------------
 // gmail-client.ts — buildMimeMessage (pure)
@@ -122,7 +142,7 @@ describe("P10 Delivery — createGmailDraft", () => {
 describe("P10 Delivery — manualExportProvider", () => {
   it("always resolves with no external reference", async () => {
     const result = await manualExportProvider.createDraft({
-      clerkUserId: "user_123",
+      userId: "user_123",
       subject: "s",
       body: "b",
       toEmail: null,
@@ -132,30 +152,29 @@ describe("P10 Delivery — manualExportProvider", () => {
 });
 
 // ---------------------------------------------------------------------------
-// google-token.ts — getGoogleAccessToken (Clerk backend SDK mocked)
+// google-token.ts — getGoogleAccessToken (Better-Auth mocked)
 // ---------------------------------------------------------------------------
 
 describe("P10 Delivery — getGoogleAccessToken", () => {
-  it("throws no_account when the user has no Google OAuth token", async () => {
-    vi.mocked(clerkClient).mockResolvedValue({
-      users: {
-        getUserOauthAccessToken: vi.fn().mockResolvedValue({ data: [] }),
-        getUser: vi.fn(),
-      },
-    } as never);
+  it("throws no_account when the user has no linked Google account", async () => {
+    mockDb({ account: undefined });
 
     await expect(getGoogleAccessToken("user_1")).rejects.toMatchObject({
       reason: "no_account",
     } satisfies Partial<DeliveryError>);
   });
 
-  it("throws not_configured when Clerk itself fails to respond", async () => {
-    vi.mocked(clerkClient).mockResolvedValue({
-      users: {
-        getUserOauthAccessToken: vi.fn().mockRejectedValue(new Error("clerk unreachable")),
-        getUser: vi.fn(),
-      },
-    } as never);
+  it("throws insufficient_scope when the linked account lacks gmail.compose", async () => {
+    mockDb({ account: { scope: "email profile" } });
+
+    await expect(getGoogleAccessToken("user_1")).rejects.toMatchObject({
+      reason: "insufficient_scope",
+    } satisfies Partial<DeliveryError>);
+  });
+
+  it("throws not_configured when the token refresh call fails", async () => {
+    mockDb({ account: { scope: "email profile gmail.compose" } });
+    vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error("refresh failed"));
 
     await expect(getGoogleAccessToken("user_1")).rejects.toMatchObject({
       reason: "not_configured",
@@ -163,19 +182,15 @@ describe("P10 Delivery — getGoogleAccessToken", () => {
   });
 
   it("resolves the access token and Gmail address on success", async () => {
-    vi.mocked(clerkClient).mockResolvedValue({
-      users: {
-        getUserOauthAccessToken: vi.fn().mockResolvedValue({ data: [{ token: "tok_123" }] }),
-        getUser: vi.fn().mockResolvedValue({
-          externalAccounts: [
-            {
-              provider: "google",
-              emailAddress: "alice@gmail.com",
-              approvedScopes: "email profile gmail.compose",
-            },
-          ],
-        }),
-      },
+    mockDb({
+      account: { scope: "email profile gmail.compose" },
+      user: { email: "alice@gmail.com" },
+    });
+    vi.mocked(auth.api.getAccessToken).mockResolvedValue({
+      accessToken: "tok_123",
+      accessTokenExpiresAt: undefined,
+      scopes: ["gmail.compose"],
+      idToken: undefined,
     } as never);
 
     const result = await getGoogleAccessToken("user_1");

@@ -6,7 +6,7 @@ export const gmailDraftProvider: DeliveryProvider = {
   key: "gmail_draft",
 
   async createDraft(input: CreateDraftInput): Promise<CreateDraftResult> {
-    const { accessToken, email } = await getGoogleAccessToken(input.clerkUserId);
+    const { accessToken, email } = await getGoogleAccessToken(input.userId);
     const draft = await createGmailDraft({
       accessToken,
       to: input.toEmail,

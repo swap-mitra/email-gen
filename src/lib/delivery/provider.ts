@@ -1,7 +1,7 @@
 export type DeliveryProviderKey = "gmail_draft" | "manual_export";
 
 export type CreateDraftInput = {
-  clerkUserId: string;
+  userId: string;
   subject: string;
   body: string;
   /** Recipient, if known from the opportunity's extracted contact info. */

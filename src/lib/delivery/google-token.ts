@@ -1,4 +1,7 @@
-import { clerkClient } from "@clerk/nextjs/server";
+import { and, eq } from "drizzle-orm";
+import { account, user } from "@/db/schema";
+import { auth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { DeliveryError } from "./errors";
 
 export type GoogleAccessToken = {
@@ -8,52 +11,50 @@ export type GoogleAccessToken = {
 };
 
 /**
- * Resolves a Clerk user's Google OAuth access token (minted with the
- * gmail.compose scope, once the Clerk Dashboard's Google connection is
- * configured for it) plus their Gmail address. Throws a typed DeliveryError
- * rather than leaking raw Clerk/network errors to the API response — the
- * caller needs to distinguish "no Google account linked" from "token/scope
- * problem" from "Clerk itself is unreachable" to show an actionable message.
+ * Resolves a signed-in user's Google OAuth access token (minted with the
+ * gmail.compose scope at sign-in, since Google is this app's only sign-in
+ * method) plus their Gmail address. Throws a typed DeliveryError rather than
+ * leaking raw Better-Auth/network errors to the API response — the caller
+ * needs to distinguish "no Google account linked" from "token/scope problem"
+ * from "the refresh call itself failed" to show an actionable message.
  */
-export async function getGoogleAccessToken(clerkUserId: string): Promise<GoogleAccessToken> {
-  const client = await clerkClient();
+export async function getGoogleAccessToken(userId: string): Promise<GoogleAccessToken> {
+  const db = getDb();
 
-  let tokens;
-  try {
-    tokens = await client.users.getUserOauthAccessToken(clerkUserId, "google");
-  } catch {
-    throw new DeliveryError(
-      "not_configured",
-      "Could not look up your Google connection. Try again in a moment.",
-    );
-  }
+  const linkedAccount = await db.query.account.findFirst({
+    where: and(eq(account.userId, userId), eq(account.providerId, "google")),
+  });
 
-  const accessToken = tokens.data[0]?.token;
-  if (!accessToken) {
+  if (!linkedAccount) {
     throw new DeliveryError(
       "no_account",
       "Connect a Google account with Gmail access to export drafts to Gmail.",
     );
   }
 
-  // Email is for display only, and the scope check here is defense-in-depth
-  // — Gmail's own 403 on the actual API call is the authoritative check —
-  // so a failure resolving either just falls through with email left null.
-  let email: string | null = null;
-  try {
-    const user = await client.users.getUser(clerkUserId);
-    const googleAccount = user.externalAccounts.find((account) => account.provider === "google");
-    email = googleAccount?.emailAddress ?? null;
-
-    if (googleAccount && !googleAccount.approvedScopes?.includes("gmail.compose")) {
-      throw new DeliveryError(
-        "insufficient_scope",
-        "Your Google connection doesn't have Gmail access yet. Reconnect Google to grant it.",
-      );
-    }
-  } catch (err) {
-    if (err instanceof DeliveryError) throw err;
+  // Defense-in-depth only — Gmail's own 403 on the actual API call is the
+  // authoritative check.
+  if (linkedAccount.scope && !linkedAccount.scope.includes("gmail.compose")) {
+    throw new DeliveryError(
+      "insufficient_scope",
+      "Your Google connection doesn't have Gmail access yet. Reconnect Google to grant it.",
+    );
   }
 
-  return { accessToken, email };
+  let accessToken: string;
+  try {
+    const result = await auth.api.getAccessToken({
+      body: { providerId: "google", userId },
+    });
+    accessToken = result.accessToken;
+  } catch {
+    throw new DeliveryError(
+      "not_configured",
+      "Could not refresh your Google access token. Try again in a moment.",
+    );
+  }
+
+  const userRow = await db.query.user.findFirst({ where: eq(user.id, userId) });
+
+  return { accessToken, email: userRow?.email ?? null };
 }
