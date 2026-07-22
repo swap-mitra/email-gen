@@ -10,7 +10,12 @@ import { opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest, OPPORTUNITY_INGEST_EVENT } from "@/lib/inngest";
+import { assertPublicHttpUrl, UnsafeUrlError } from "@/lib/ingestion/url-safety";
+import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
+
+const CREATE_RATE_LIMIT_MAX = 20;
+const CREATE_RATE_LIMIT_WINDOW_MINUTES = 10;
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
@@ -82,6 +87,40 @@ export async function POST(req: Request) {
 
     const { data, error } = await parseBody(req, createOpportunityRequestSchema);
     if (error) return error;
+
+    try {
+      await assertPublicHttpUrl(data.sourceUrl);
+    } catch (err) {
+      if (err instanceof UnsafeUrlError) {
+        return createApiErrorResponse({
+          code: "bad_request",
+          message: err.message,
+          status: 400,
+        });
+      }
+      throw err;
+    }
+
+    try {
+      await assertUnderRateLimit({
+        table: opportunities,
+        workspaceIdColumn: opportunities.workspaceId,
+        createdAtColumn: opportunities.createdAt,
+        workspaceId: context.workspace.id,
+        windowMinutes: CREATE_RATE_LIMIT_WINDOW_MINUTES,
+        max: CREATE_RATE_LIMIT_MAX,
+        action: "opportunities created",
+      });
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return createApiErrorResponse({
+          code: "rate_limited",
+          message: err.message,
+          status: 429,
+        });
+      }
+      throw err;
+    }
 
     const db = getDb();
 

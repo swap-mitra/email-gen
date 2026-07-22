@@ -18,6 +18,8 @@ export default async function KnowledgePage() {
   const context = await getActiveWorkspaceContext();
   if (!context.workspace) redirect("/dashboard");
 
+  const isAdmin = context.membership.role === "org:admin";
+
   const db = getDb();
   const items = await db
     .select({
@@ -52,7 +54,13 @@ export default async function KnowledgePage() {
 
       <div className="dash-block-card">
         <h2 className="block-title">Add knowledge</h2>
-        <KnowledgeForm />
+        {isAdmin ? (
+          <KnowledgeForm />
+        ) : (
+          <p className="empty-state">
+            Only workspace admins can add knowledge items. Ask an admin to add proof points here.
+          </p>
+        )}
       </div>
 
       <div className="dash-block-card">

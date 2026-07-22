@@ -10,10 +10,14 @@ import { knowledgeItems } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest, KNOWLEDGE_ITEM_EMBED_EVENT } from "@/lib/inngest";
+import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
+
+const CREATE_RATE_LIMIT_MAX = 30;
+const CREATE_RATE_LIMIT_WINDOW_MINUTES = 10;
 
 export async function GET(req: Request) {
   try {
@@ -80,8 +84,37 @@ export async function POST(req: Request) {
       });
     }
 
+    if (context.membership.role !== "org:admin") {
+      return createApiErrorResponse({
+        code: "forbidden",
+        message: "Only workspace admins can add knowledge items.",
+        status: 403,
+      });
+    }
+
     const { data, error } = await parseBody(req, createKnowledgeItemRequestSchema);
     if (error) return error;
+
+    try {
+      await assertUnderRateLimit({
+        table: knowledgeItems,
+        workspaceIdColumn: knowledgeItems.workspaceId,
+        createdAtColumn: knowledgeItems.createdAt,
+        workspaceId: context.workspace.id,
+        windowMinutes: CREATE_RATE_LIMIT_WINDOW_MINUTES,
+        max: CREATE_RATE_LIMIT_MAX,
+        action: "knowledge items created",
+      });
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return createApiErrorResponse({
+          code: "rate_limited",
+          message: err.message,
+          status: 429,
+        });
+      }
+      throw err;
+    }
 
     const db = getDb();
 
