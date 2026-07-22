@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { createApiErrorResponse } from "@/lib/api";
 import { opportunitySchema } from "@/lib/contracts/api";
-import { opportunities } from "@/db/schema";
+import { activities, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest, OPPORTUNITY_INGEST_EVENT } from "@/lib/inngest";
+import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
+
+const REINGEST_RATE_LIMIT_MAX = 10;
+const REINGEST_RATE_LIMIT_WINDOW_MINUTES = 10;
 
 export async function POST(
   _req: Request,
@@ -55,6 +59,28 @@ export async function POST(
         message: "Ingestion is already running for this opportunity.",
         status: 409,
       });
+    }
+
+    try {
+      await assertUnderRateLimit({
+        table: activities,
+        workspaceIdColumn: activities.workspaceId,
+        createdAtColumn: activities.createdAt,
+        workspaceId: context.workspace.id,
+        windowMinutes: REINGEST_RATE_LIMIT_WINDOW_MINUTES,
+        max: REINGEST_RATE_LIMIT_MAX,
+        action: "re-ingest requests",
+        extraCondition: eq(activities.kind, "opportunity.reingest_requested"),
+      });
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return createApiErrorResponse({
+          code: "rate_limited",
+          message: err.message,
+          status: 429,
+        });
+      }
+      throw err;
     }
 
     const now = new Date();

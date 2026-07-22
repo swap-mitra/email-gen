@@ -10,10 +10,14 @@ import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest } from "@/lib/inngest";
+import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
+
+const CREATE_RATE_LIMIT_MAX = 20;
+const CREATE_RATE_LIMIT_WINDOW_MINUTES = 10;
 
 export async function GET(req: Request) {
   try {
@@ -124,6 +128,27 @@ export async function POST(req: Request) {
         message: "Opportunity ingestion must be completed before generating a draft.",
         status: 409,
       });
+    }
+
+    try {
+      await assertUnderRateLimit({
+        table: drafts,
+        workspaceIdColumn: drafts.workspaceId,
+        createdAtColumn: drafts.createdAt,
+        workspaceId: context.workspace.id,
+        windowMinutes: CREATE_RATE_LIMIT_WINDOW_MINUTES,
+        max: CREATE_RATE_LIMIT_MAX,
+        action: "drafts generated",
+      });
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return createApiErrorResponse({
+          code: "rate_limited",
+          message: err.message,
+          status: 429,
+        });
+      }
+      throw err;
     }
 
     const [draft] = await db
