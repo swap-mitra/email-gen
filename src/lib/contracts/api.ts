@@ -39,7 +39,7 @@ export const healthResponseSchema = z.object({
 
 export const workspaceSummarySchema = z.object({
   id: z.string().uuid(),
-  clerkOrganizationId: z.string().min(1),
+  organizationId: z.string().min(1),
   name: z.string().min(1),
   slug: z.string().min(1),
   createdAt: z.coerce.date(),
@@ -47,19 +47,19 @@ export const workspaceSummarySchema = z.object({
 });
 
 export const workspaceMembershipSchema = z.object({
-  workspaceId: z.string().uuid(),
-  clerkUserId: z.string().min(1),
+  id: z.string().min(1),
+  organizationId: z.string().min(1),
+  userId: z.string().min(1),
   role: z.string().min(1),
   createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
 });
 
 export const workspaceContextResponseSchema = z.object({
   workspace: workspaceSummarySchema,
   membership: workspaceMembershipSchema,
   viewer: z.object({
-    clerkUserId: z.string().min(1),
-    clerkOrganizationId: z.string().min(1),
+    userId: z.string().min(1),
+    organizationId: z.string().min(1),
   }),
 });
 
@@ -129,7 +129,7 @@ export const sendJobSchema = z.object({
   providerRef: z.string().nullable(),
   error: z.string().nullable(),
   attempts: z.number().int(),
-  requestedByClerkUserId: z.string(),
+  requestedByUserId: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -170,7 +170,7 @@ export const draftVersionSchema = z.object({
   /** IDs of knowledge_items used to ground this version. */
   groundingRefs: z.array(z.string().uuid()),
   source: draftSourceSchema,
-  authorClerkUserId: z.string().nullable(),
+  authorUserId: z.string().nullable(),
   createdAt: z.coerce.date(),
 });
 
@@ -233,7 +233,7 @@ export const approvalSchema = z.object({
   draftId: z.string().uuid(),
   draftVersionId: z.string().uuid(),
   workspaceId: z.string().uuid(),
-  reviewerClerkUserId: z.string(),
+  reviewerUserId: z.string(),
   note: z.string().nullable(),
   createdAt: z.coerce.date(),
 });
@@ -245,7 +245,7 @@ export const approvalSchema = z.object({
 export const activitySchema = z.object({
   id: z.string().uuid(),
   workspaceId: z.string().uuid(),
-  actorClerkUserId: z.string().nullable(),
+  actorUserId: z.string().nullable(),
   kind: z.string(),
   entityType: z.string(),
   entityId: z.string(),

@@ -4,42 +4,36 @@ import {
   integer,
   jsonb,
   pgTable,
-  primaryKey,
   real,
   text,
   timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { organization, user } from "./auth-schema";
+
+export * from "./auth-schema";
 
 // ---------------------------------------------------------------------------
 // Tenancy
+// A thin uuid-keyed mirror of Better-Auth's `organization` table — kept so
+// the 9 domain tables below don't need a uuid->text FK migration just to
+// point at Better-Auth's text-id organizations. Membership/role, by
+// contrast, is sourced live from Better-Auth's own `member` table (see
+// src/lib/workspaces.ts) rather than mirrored here.
 // ---------------------------------------------------------------------------
 
 export const workspaces = pgTable("workspaces", {
   id: uuid("id").defaultRandom().primaryKey(),
-  clerkOrganizationId: text("clerk_organization_id").notNull().unique(),
+  organizationId: text("organization_id")
+    .notNull()
+    .unique()
+    .references(() => organization.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
-export const workspaceMemberships = pgTable(
-  "workspace_memberships",
-  {
-    workspaceId: uuid("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    clerkUserId: text("clerk_user_id").notNull(),
-    role: text("role").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    pk: primaryKey({ columns: [table.workspaceId, table.clerkUserId] }),
-  }),
-);
 
 // ---------------------------------------------------------------------------
 // Opportunities
@@ -183,8 +177,8 @@ export const draftVersions = pgTable("draft_versions", {
    */
   source: text("source").notNull().default("ai_generated"),
 
-  /** Clerk user ID of the person who created this version (null for AI). */
-  authorClerkUserId: text("author_clerk_user_id"),
+  /** User who created this version (null for AI). */
+  authorUserId: text("author_user_id").references(() => user.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -206,8 +200,10 @@ export const approvals = pgTable("approvals", {
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
 
-  /** Clerk user ID of the reviewer who approved. */
-  reviewerClerkUserId: text("reviewer_clerk_user_id").notNull(),
+  /** The reviewer who approved. */
+  reviewerUserId: text("reviewer_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "restrict" }),
 
   /** Optional reviewer note. */
   note: text("note"),
@@ -224,7 +220,7 @@ export const activities = pgTable("activities", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  actorClerkUserId: text("actor_clerk_user_id"),
+  actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
   kind: text("kind").notNull(),
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id").notNull(),
@@ -235,8 +231,10 @@ export const activities = pgTable("activities", {
 // ---------------------------------------------------------------------------
 // Delivery accounts
 // Thin, lazily-written audit/display record of which external account (e.g.
-// Gmail address) a workspace member last exported to. Clerk owns the actual
-// OAuth connection and token refresh — this table is for display/audit only.
+// Gmail address) a workspace member last exported to. The real OAuth token
+// lives in Better-Auth's own `account` table — this table stays useful
+// specifically because it's workspace-scoped audit/display data, which
+// `account` (per-user, not per-workspace) doesn't provide.
 // ---------------------------------------------------------------------------
 
 export const deliveryAccounts = pgTable(
@@ -246,7 +244,9 @@ export const deliveryAccounts = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    clerkUserId: text("clerk_user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
 
     /** Mirrors DeliveryProviderKey. Only "gmail_draft" writes rows here. */
     provider: text("provider").notNull(),
@@ -263,7 +263,7 @@ export const deliveryAccounts = pgTable(
   (table) => ({
     workspaceUserProviderUnique: unique("delivery_accounts_workspace_user_provider_key").on(
       table.workspaceId,
-      table.clerkUserId,
+      table.userId,
       table.provider,
     ),
   }),
@@ -307,8 +307,10 @@ export const sendJobs = pgTable("send_jobs", {
   /** Number of attempts recorded in send_attempts for this job. */
   attempts: integer("attempts").notNull().default(0),
 
-  /** Clerk user ID of the person who triggered this export. */
-  requestedByClerkUserId: text("requested_by_clerk_user_id").notNull(),
+  /** The user who triggered this export. */
+  requestedByUserId: text("requested_by_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "restrict" }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -345,7 +347,6 @@ export const sendAttempts = pgTable("send_attempts", {
 // ---------------------------------------------------------------------------
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
-  memberships: many(workspaceMemberships),
   opportunities: many(opportunities),
   knowledgeItems: many(knowledgeItems),
   drafts: many(drafts),
@@ -354,13 +355,6 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
   activities: many(activities),
   deliveryAccounts: many(deliveryAccounts),
   sendJobs: many(sendJobs),
-}));
-
-export const workspaceMembershipsRelations = relations(workspaceMemberships, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [workspaceMemberships.workspaceId],
-    references: [workspaces.id],
-  }),
 }));
 
 export const opportunitiesRelations = relations(opportunities, ({ one, many }) => ({
@@ -401,6 +395,10 @@ export const draftVersionsRelations = relations(draftVersions, ({ one, many }) =
     fields: [draftVersions.workspaceId],
     references: [workspaces.id],
   }),
+  author: one(user, {
+    fields: [draftVersions.authorUserId],
+    references: [user.id],
+  }),
   sendJobs: many(sendJobs),
 }));
 
@@ -417,6 +415,10 @@ export const approvalsRelations = relations(approvals, ({ one }) => ({
     fields: [approvals.workspaceId],
     references: [workspaces.id],
   }),
+  reviewer: one(user, {
+    fields: [approvals.reviewerUserId],
+    references: [user.id],
+  }),
 }));
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
@@ -424,12 +426,20 @@ export const activitiesRelations = relations(activities, ({ one }) => ({
     fields: [activities.workspaceId],
     references: [workspaces.id],
   }),
+  actor: one(user, {
+    fields: [activities.actorUserId],
+    references: [user.id],
+  }),
 }));
 
 export const deliveryAccountsRelations = relations(deliveryAccounts, ({ one, many }) => ({
   workspace: one(workspaces, {
     fields: [deliveryAccounts.workspaceId],
     references: [workspaces.id],
+  }),
+  user: one(user, {
+    fields: [deliveryAccounts.userId],
+    references: [user.id],
   }),
   sendJobs: many(sendJobs),
 }));
@@ -451,6 +461,10 @@ export const sendJobsRelations = relations(sendJobs, ({ one, many }) => ({
     fields: [sendJobs.deliveryAccountId],
     references: [deliveryAccounts.id],
   }),
+  requestedBy: one(user, {
+    fields: [sendJobs.requestedByUserId],
+    references: [user.id],
+  }),
   attempts: many(sendAttempts),
 }));
 
@@ -470,7 +484,6 @@ export const sendAttemptsRelations = relations(sendAttempts, ({ one }) => ({
 // ---------------------------------------------------------------------------
 
 export type Workspace = typeof workspaces.$inferSelect;
-export type WorkspaceMembership = typeof workspaceMemberships.$inferSelect;
 export type Opportunity = typeof opportunities.$inferSelect;
 export type KnowledgeItem = typeof knowledgeItems.$inferSelect;
 export type Draft = typeof drafts.$inferSelect;

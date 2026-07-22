@@ -45,7 +45,7 @@ ALTER TABLE "send_jobs" ADD CONSTRAINT "send_jobs_draft_id_drafts_id_fk" FOREIGN
 ALTER TABLE "send_jobs" ADD CONSTRAINT "send_jobs_draft_version_id_draft_versions_id_fk" FOREIGN KEY ("draft_version_id") REFERENCES "public"."draft_versions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "send_jobs" ADD CONSTRAINT "send_jobs_delivery_account_id_delivery_accounts_id_fk" FOREIGN KEY ("delivery_account_id") REFERENCES "public"."delivery_accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "delivery_accounts_workspace_id_idx" ON "delivery_accounts" ("workspace_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "delivery_accounts_clerk_user_id_idx" ON "delivery_accounts" ("clerk_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "delivery_accounts_user_id_idx" ON "delivery_accounts" ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "send_jobs_workspace_id_idx" ON "send_jobs" ("workspace_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "send_jobs_draft_id_idx" ON "send_jobs" ("draft_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "send_jobs_status_idx" ON "send_jobs" ("status");--> statement-breakpoint

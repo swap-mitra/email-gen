@@ -31,27 +31,25 @@ describe("api contracts", () => {
   });
 
   it("accepts the workspace context response", () => {
-    const workspaceId = crypto.randomUUID();
-
     const result = workspaceContextResponseSchema.parse({
       workspace: {
-        id: workspaceId,
-        clerkOrganizationId: "org_123",
+        id: crypto.randomUUID(),
+        organizationId: "org_123",
         name: "Acme",
         slug: "acme",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       membership: {
-        workspaceId,
-        clerkUserId: "user_123",
-        role: "org:admin",
+        id: "member_123",
+        organizationId: "org_123",
+        userId: "user_123",
+        role: "admin",
         createdAt: new Date(),
-        updatedAt: new Date(),
       },
       viewer: {
-        clerkUserId: "user_123",
-        clerkOrganizationId: "org_123",
+        userId: "user_123",
+        organizationId: "org_123",
       },
     });
 
@@ -70,7 +68,7 @@ describe("api contracts", () => {
       providerRef: "draft-abc",
       error: null,
       attempts: 1,
-      requestedByClerkUserId: "user_123",
+      requestedByUserId: "user_123",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -90,7 +88,7 @@ describe("api contracts", () => {
       providerRef: null,
       error: null,
       attempts: 1,
-      requestedByClerkUserId: "user_123",
+      requestedByUserId: "user_123",
       createdAt: new Date(),
       updatedAt: new Date(),
       externalAccountEmail: null,
@@ -112,7 +110,7 @@ describe("api contracts", () => {
         providerRef: null,
         error: null,
         attempts: 1,
-        requestedByClerkUserId: "user_123",
+        requestedByUserId: "user_123",
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
