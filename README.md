@@ -46,7 +46,10 @@ copy .env.example .env.local
 ```bash
 npm run db:generate
 npm run db:push
+npm run db:indexes
 ```
+
+`db:push` only syncs what's declared in `schema.ts` — every index (including the pgvector HNSW index) is hand-written SQL in `drizzle/*.sql` instead, so `db:indexes` is a required, separate step. Safe to re-run any time; run it again after pulling any migration that adds new indexes, and against every fresh database (including production).
 
 4. Start the development server, and in a separate terminal, the Inngest dev server (required for background workflows — set `INNGEST_DEV=1` in `.env` first, see the comment above `INNGEST_DEV` in `.env.example`):
 

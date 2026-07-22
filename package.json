@@ -6,6 +6,7 @@
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:indexes": "node scripts/apply-indexes.mjs",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev",
     "inngest": "npx inngest-cli@latest dev",
