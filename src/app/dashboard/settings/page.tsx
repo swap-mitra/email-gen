@@ -1,13 +1,15 @@
-import { OrganizationProfile } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { formatDateTime } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { MembersPanel } from "./members-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const context = await getActiveWorkspaceContext();
   if (!context.workspace) redirect("/dashboard");
+
+  const isAdmin = context.membership.role === "owner" || context.membership.role === "admin";
 
   return (
     <>
@@ -43,12 +45,11 @@ export default async function SettingsPage() {
       <div className="dash-block-card">
         <h2 className="block-title">Members &amp; organization</h2>
         <p className="opp-hint">
-          Invitations, roles, and organization details are managed through Clerk. Changes here apply
-          to everyone in this workspace.
+          {isAdmin
+            ? "Manage roles, invite teammates, and remove members. Changes here apply to everyone in this workspace."
+            : "Only workspace admins can manage members and invitations."}
         </p>
-        <div className="org-profile-wrap">
-          <OrganizationProfile routing="hash" />
-        </div>
+        <MembersPanel isAdmin={isAdmin} currentUserId={context.userId} />
       </div>
     </>
   );

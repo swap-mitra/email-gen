@@ -1,6 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { auth } from "@/lib/auth";
 
 const capabilities = [
   "Submit a job or company URL and extract a structured opportunity",
@@ -11,7 +12,8 @@ const capabilities = [
 
 
 export default async function Home() {
-  const { userId } = await auth();
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userId = session?.user.id ?? null;
 
   return (
     <>
@@ -26,10 +28,7 @@ export default async function Home() {
             {userId ? (
               <Link href="/dashboard">Dashboard →</Link>
             ) : (
-              <>
-                <Link href="/sign-in">Sign in</Link>
-                <Link href="/sign-up">Create workspace</Link>
-              </>
+              <Link href="/sign-in">Sign in</Link>
             )}
             <ThemeToggle />
           </nav>
@@ -54,14 +53,9 @@ export default async function Home() {
                 Open dashboard
               </Link>
             ) : (
-              <>
-                <Link className="btn btn-primary" href="/sign-up">
-                  Create workspace
-                </Link>
-                <Link className="btn btn-secondary" href="/sign-in">
-                  Sign in
-                </Link>
-              </>
+              <Link className="btn btn-primary" href="/sign-in">
+                Sign in with Google
+              </Link>
             )}
           </div>
         </section>

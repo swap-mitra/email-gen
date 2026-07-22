@@ -1,7 +1,7 @@
-import { CreateOrganization } from "@clerk/nextjs";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { drafts, draftVersions, opportunities } from "@/db/schema";
+import { CreateWorkspaceForm } from "@/components/create-workspace-form";
 import { getDb } from "@/lib/db";
 import { opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
@@ -27,11 +27,10 @@ export default async function DashboardPage() {
         </div>
         <div className="setup-prompt-body">
           <p>
-            Email GenAI uses Clerk organizations as the source of truth for workspace isolation.
-            Create an organization and this dashboard will automatically provision the matching
-            workspace record in PostgreSQL.
+            Create a workspace to get started — every opportunity, draft, and knowledge item is
+            scoped to one workspace.
           </p>
-          <CreateOrganization afterCreateOrganizationUrl="/dashboard" skipInvitationScreen />
+          <CreateWorkspaceForm />
         </div>
       </div>
     );

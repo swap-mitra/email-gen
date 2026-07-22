@@ -1,7 +1,5 @@
 "use client";
 
-import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
 import { createContext, useContext, useEffect, useState } from "react";
 import { THEME_STORAGE_KEY, type Theme } from "@/lib/theme";
 
@@ -38,21 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <ClerkProvider
-        appearance={{
-          baseTheme: theme === "dark" ? dark : undefined,
-          // Yellow stays bright in both themes, so text on it must stay black
-          // (matches --on-yellow in globals.css).
-          variables: {
-            colorPrimary: "#f5e642",
-            colorTextOnPrimaryBackground: "#0a0a0a",
-          },
-        }}
-      >
-        {children}
-      </ClerkProvider>
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>
   );
 }
 

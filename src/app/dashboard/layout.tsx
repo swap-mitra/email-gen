@@ -1,7 +1,8 @@
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 
 export default function DashboardLayout({
   children,
@@ -18,13 +19,8 @@ export default function DashboardLayout({
             <span className="brand-badge">Workspace</span>
           </Link>
           <nav className="header-nav header-nav--account">
-            <OrganizationSwitcher
-              afterCreateOrganizationUrl="/dashboard"
-              afterLeaveOrganizationUrl="/dashboard"
-              afterSelectOrganizationUrl="/dashboard"
-              hidePersonal
-            />
-            <UserButton />
+            <OrgSwitcher />
+            <UserMenu />
             <ThemeToggle />
           </nav>
         </div>

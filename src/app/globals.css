@@ -171,8 +171,8 @@ a {
   gap: 0;
 }
 
-/* Direct children only — third-party widgets (Clerk) render their own nested
-   buttons and must not inherit nav chrome. */
+/* Direct children only — dropdown widgets (user menu, org switcher) render
+   their own nested buttons and must not inherit nav chrome. */
 .header-nav > a,
 .header-nav > button {
   font-family: var(--font-body);
@@ -199,7 +199,7 @@ a {
   color: var(--on-yellow);
 }
 
-/* Dashboard variant — hosts Clerk widgets, spaced instead of segmented. */
+/* Dashboard variant — hosts the account widgets, spaced instead of segmented. */
 .header-nav--account {
   gap: 16px;
 }
@@ -316,6 +316,21 @@ a {
   top: 20px;
   right: 20px;
   z-index: 10;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  border: var(--rule-heavy);
+  background: var(--white);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+
+.auth-card .btn {
+  width: 100%;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1267,8 +1282,25 @@ a {
   background: var(--white);
 }
 
-.org-profile-wrap {
-  overflow-x: auto;
+.user-menu-name {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.org-switcher {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  border: none;
+  border-left: var(--border);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
 }
 
 /* ---------------------------------------------------------------------------
