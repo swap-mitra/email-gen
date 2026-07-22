@@ -1,14 +1,32 @@
-# email_gen
+# Email GenAI
 
-`email_gen` turns a company or job URL into a grounded, evidence-backed outbound email — extracted, drafted, and reviewed inside a multi-tenant workspace, with delivery kept one deliberate human action away from irreversible.
+**Email GenAI** turns a company or job URL into a grounded, evidence-backed outbound email — extracted, drafted, and reviewed inside a multi-tenant workspace, with delivery kept one deliberate human action away from irreversible.
 
 The project is built around one principle: **agentic drafting should be observable and reversible before it leaves the workspace.**
+
+## Contents
+
+- [Why This Exists](#why-this-exists)
+- [System Overview](#system-overview)
+- [Workflow Lifecycle](#workflow-lifecycle)
+- [Domain Model](#domain-model)
+- [Trust Boundaries](#trust-boundaries)
+- [Repository Layout](#repository-layout)
+- [Features](#features)
+- [Local Development](#local-development)
+- [Background Workflows (Inngest)](#background-workflows-inngest)
+- [AI Configuration](#ai-configuration)
+- [Gmail Export (Delivery)](#gmail-export-delivery)
+- [Rate Limits & Abuse Protection](#rate-limits--abuse-protection)
+- [Production Deployment](#production-deployment)
+- [Security Notes](#security-notes)
+- [Verification](#verification)
 
 ## Why This Exists
 
 An AI can reasonably extract a job posting, retrieve the right proof points, and draft a cold outreach email. That's useful, but the failure mode is real: a wrong claim, an ungrounded pitch, or a sent email to the wrong contact doesn't undo itself.
 
-`email_gen` never lets the model send anything directly. It can only produce a `Draft` — versioned, tied to the evidence it cited, and held for review until a human explicitly approves it. Delivery itself (Gmail draft export) writes into the reviewer's own Gmail drafts folder, not their sent mail — so even after approval, sending is still a separate, manual, human act.
+Email GenAI never lets the model send anything directly. It can only produce a `Draft` — versioned, tied to the evidence it cited, and held for review until a human explicitly approves it. Delivery itself (Gmail draft export) writes into the reviewer's own Gmail drafts folder, not their sent mail — so even after approval, sending is still a separate, manual, human act.
 
 This gives the system three practical safety properties:
 
@@ -259,21 +277,6 @@ Link the repository directly to Vercel — `git push` to `main` triggers a build
 - **Database schema and indexes are never applied automatically.** Whenever `schema.ts` or `drizzle/*.sql` changes, run `npm run db:push && npm run db:indexes` by hand against the production database before or after deploying.
 
 Before going live: switch Clerk to production keys, register the app with Inngest Cloud and set `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` (leave `INNGEST_DEV` unset), and confirm production API keys for OpenRouter/Browserbase/Blob.
-
-## Specs
-
-The implementation roadmap lives in `docs/specs/` (gitignored — local-only, never pushed):
-
-- `001-product-spec.md`
-- `002-domain-model.md`
-- `003-api-spec.md`
-- `004-ai-retrieval-spec.md`
-- `005-ingestion-spec.md`
-- `006-auth-tenancy-spec.md`
-- `007-ui-spec.md`
-- `008-async-workflow-spec.md`
-- `009-observability-spec.md`
-- `010-future-delivery-spec.md`
 
 ## Security Notes
 
