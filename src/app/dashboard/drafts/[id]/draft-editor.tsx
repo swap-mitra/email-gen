@@ -24,9 +24,10 @@ type ExportView = {
   externalAccountEmail: string | null;
 };
 
-// Gmail export needs manual Google Cloud + Clerk OAuth setup (see the
-// project's delivery spec) before it can work — keep the button visible but
-// disabled until that's done.
+// Gmail export needs the Google Cloud OAuth client set up (GOOGLE_CLIENT_ID/
+// GOOGLE_CLIENT_SECRET, gmail.compose scope, Gmail API enabled — see the
+// README) before it can work — keep the button visible but disabled until
+// that's done.
 const GMAIL_EXPORT_DISABLED = true;
 
 async function readJson(res: Response) {
@@ -264,9 +265,9 @@ export function DraftEditor({
                 <button
                   className="btn btn-secondary"
                   onClick={handleExport}
-                  // Gated off until the Gmail delivery setup (Google Cloud +
-                  // Clerk custom OAuth credentials) is complete — remove the
-                  // GMAIL_EXPORT_DISABLED check to turn this back on.
+                  // Gated off until the Google Cloud OAuth client is set up
+                  // (see README) — remove the GMAIL_EXPORT_DISABLED check to
+                  // turn this back on.
                   disabled={GMAIL_EXPORT_DISABLED || isExporting}
                   title={GMAIL_EXPORT_DISABLED ? "Gmail export support coming soon" : undefined}
                 >

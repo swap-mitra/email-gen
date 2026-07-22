@@ -163,7 +163,7 @@ export async function POST(req: Request) {
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "draft.created",
       entityType: "draft",
       entityId: draft.id,

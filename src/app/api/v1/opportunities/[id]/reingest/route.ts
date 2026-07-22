@@ -98,7 +98,7 @@ export async function POST(
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "opportunity.reingest_requested",
       entityType: "opportunity",
       entityId: id,

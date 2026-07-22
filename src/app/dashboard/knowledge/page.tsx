@@ -18,7 +18,7 @@ export default async function KnowledgePage() {
   const context = await getActiveWorkspaceContext();
   if (!context.workspace) redirect("/dashboard");
 
-  const isAdmin = context.membership.role === "org:admin";
+  const isAdmin = context.membership.role === "owner" || context.membership.role === "admin";
 
   const db = getDb();
   const items = await db

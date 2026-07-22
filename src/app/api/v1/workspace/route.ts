@@ -27,8 +27,8 @@ export async function GET() {
       workspace: context.workspace,
       membership: context.membership,
       viewer: {
-        clerkUserId: context.userId,
-        clerkOrganizationId: context.orgId,
+        userId: context.userId,
+        organizationId: context.orgId,
       },
     });
 

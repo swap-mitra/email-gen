@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (context.membership.role !== "org:admin") {
+    if (context.membership.role !== "owner" && context.membership.role !== "admin") {
       return createApiErrorResponse({
         code: "forbidden",
         message: "Only workspace admins can add knowledge items.",
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "knowledge_item.created",
       entityType: "knowledge_item",
       entityId: item.id,

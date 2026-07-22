@@ -108,13 +108,13 @@ export async function POST(
         provider,
         status: "running",
         attempts: 1,
-        requestedByClerkUserId: context.userId,
+        requestedByUserId: context.userId,
       })
       .returning();
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "draft.export_started",
       entityType: "draft",
       entityId: id,
@@ -123,7 +123,7 @@ export async function POST(
 
     try {
       const result = await deliveryProviders[provider].createDraft({
-        clerkUserId: context.userId,
+        userId: context.userId,
         subject: latestVersion.subject,
         body: latestVersion.body,
         toEmail,
@@ -135,13 +135,13 @@ export async function POST(
           .insert(deliveryAccounts)
           .values({
             workspaceId: context.workspace.id,
-            clerkUserId: context.userId,
+            userId: context.userId,
             provider,
             externalAccountEmail: result.externalAccountEmail,
             lastUsedAt: new Date(),
           })
           .onConflictDoUpdate({
-            target: [deliveryAccounts.workspaceId, deliveryAccounts.clerkUserId, deliveryAccounts.provider],
+            target: [deliveryAccounts.workspaceId, deliveryAccounts.userId, deliveryAccounts.provider],
             set: {
               externalAccountEmail: result.externalAccountEmail,
               lastUsedAt: new Date(),
@@ -173,7 +173,7 @@ export async function POST(
 
       await recordActivity({
         workspaceId: context.workspace.id,
-        actorClerkUserId: context.userId,
+        actorUserId: context.userId,
         kind: "draft.export_completed",
         entityType: "draft",
         entityId: id,
@@ -209,7 +209,7 @@ export async function POST(
 
       await recordActivity({
         workspaceId: context.workspace.id,
-        actorClerkUserId: context.userId,
+        actorUserId: context.userId,
         kind: "draft.export_failed",
         entityType: "draft",
         entityId: id,

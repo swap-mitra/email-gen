@@ -112,7 +112,7 @@ export default async function OpportunityDetailPage({
                 <li key={activity.id}>
                   <span className="activity-kind">{formatActivityKind(activity.kind)}</span>
                   <span className="activity-entity">
-                    {activity.actorClerkUserId ? "user action" : "system"}
+                    {activity.actorUserId ? "user action" : "system"}
                   </span>
                   <time className="activity-time" dateTime={activity.createdAt.toISOString()}>
                     {formatDateTime(activity.createdAt)}

@@ -76,7 +76,7 @@ export async function POST(
         subject: data.subject,
         body: data.body,
         source: "human_revised",
-        authorClerkUserId: context.userId,
+        authorUserId: context.userId,
         groundingRefs: [],
       })
       .returning();
@@ -89,7 +89,7 @@ export async function POST(
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "draft.revised",
       entityType: "draft",
       entityId: id,

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { approvals, drafts, draftVersions, knowledgeItems, opportunities, sendJobs } from "@/db/schema";
-import { resolveClerkUserName } from "@/lib/clerk-users";
+import { resolveUserName } from "@/lib/users";
 import { getDb } from "@/lib/db";
 import { formatDateTime, opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
@@ -66,7 +66,7 @@ export default async function DraftEditorPage({
     }),
   ]);
 
-  const reviewerName = approval ? await resolveClerkUserName(approval.reviewerClerkUserId) : null;
+  const reviewerName = approval ? await resolveUserName(approval.reviewerUserId) : null;
 
   const isGenerating =
     draft.generationStatus === "pending" || draft.generationStatus === "running";

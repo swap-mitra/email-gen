@@ -79,7 +79,7 @@ export async function POST(
         draftId: id,
         draftVersionId: latestVersion.id,
         workspaceId: context.workspace.id,
-        reviewerClerkUserId: context.userId,
+        reviewerUserId: context.userId,
         note: data.note ?? null,
       })
       .returning();
@@ -92,7 +92,7 @@ export async function POST(
 
     await recordActivity({
       workspaceId: context.workspace.id,
-      actorClerkUserId: context.userId,
+      actorUserId: context.userId,
       kind: "draft.approved",
       entityType: "draft",
       entityId: id,
