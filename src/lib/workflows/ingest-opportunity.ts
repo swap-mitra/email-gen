@@ -1,6 +1,11 @@
 import { NonRetriableError } from "inngest";
 import { eq } from "drizzle-orm";
-import { inngest, OPPORTUNITY_INGEST_EVENT, type OpportunityIngestData } from "@/lib/inngest";
+import {
+  createFailureHandler,
+  inngest,
+  OPPORTUNITY_INGEST_EVENT,
+  type OpportunityIngestData,
+} from "@/lib/inngest";
 import { opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
@@ -259,53 +264,24 @@ export const ingestOpportunity = inngest.createFunction(
 // Failure hook — fires when all retries are exhausted
 // ---------------------------------------------------------------------------
 
-export const onIngestFailure = inngest.createFunction(
-  {
-    id: "on-ingest-opportunity-failure",
-    name: "Handle Ingest Failure",
-    triggers: [{ event: "inngest/function.failed" }],
-  },
-  async ({ event, step }) => {
-    const failureData = event.data as Record<string, unknown>;
-    const original = failureData.event as {
-      name: string;
-      data: OpportunityIngestData;
-    };
-    if (original.name !== OPPORTUNITY_INGEST_EVENT) return;
+export const onIngestFailure = createFailureHandler<OpportunityIngestData>({
+  id: "on-ingest-opportunity-failure",
+  name: "Handle Ingest Failure",
+  eventName: OPPORTUNITY_INGEST_EVENT,
+  logMessage: "ingest_opportunity_failed",
+  onFailure: async ({ opportunityId, workspaceId }, errorMessage) => {
+    const db = getDb();
+    await db
+      .update(opportunities)
+      .set({ ingestStatus: "failed", ingestError: errorMessage, updatedAt: new Date() })
+      .where(eq(opportunities.id, opportunityId));
 
-    const { opportunityId, workspaceId } = original.data;
-    const failedRunError = failureData.error as
-      | { message?: string; name?: string; stack?: string }
-      | undefined;
-    const errorMessage = failedRunError?.message ?? "Unknown error";
-
-    logger.error("ingest_opportunity_failed", {
-      runId: failureData.run_id,
+    await recordActivity({
       workspaceId,
-      opportunityId,
-      errorMessage,
-      errorName: failedRunError?.name,
-      errorStack: failedRunError?.stack,
-    });
-
-    await step.run("mark-failed", async () => {
-      const db = getDb();
-      await db
-        .update(opportunities)
-        .set({
-          ingestStatus: "failed",
-          ingestError: errorMessage,
-          updatedAt: new Date(),
-        })
-        .where(eq(opportunities.id, opportunityId));
-
-      await recordActivity({
-        workspaceId,
-        kind: "opportunity.ingest_failed",
-        entityType: "opportunity",
-        entityId: opportunityId,
-        payload: { error: errorMessage },
-      });
+      kind: "opportunity.ingest_failed",
+      entityType: "opportunity",
+      entityId: opportunityId,
+      payload: { error: errorMessage },
     });
   },
-);
+});

@@ -1,10 +1,15 @@
 import { NonRetriableError } from "inngest";
 import { eq } from "drizzle-orm";
-import { inngest, KNOWLEDGE_ITEM_EMBED_EVENT, type KnowledgeItemEmbedData } from "@/lib/inngest";
+import {
+  createFailureHandler,
+  inngest,
+  KNOWLEDGE_ITEM_EMBED_EVENT,
+  type KnowledgeItemEmbedData,
+} from "@/lib/inngest";
 import { knowledgeItems } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
-import { embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
+import { embedText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
 import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
@@ -61,7 +66,7 @@ export const embedKnowledgeItem = inngest.createFunction(
         throw new NonRetriableError(`Knowledge item ${knowledgeItemId} not found.`);
       }
 
-      const vector = await embedDocumentText(`${item.title}\n\n${item.content}`);
+      const vector = await embedText(`${item.title}\n\n${item.content}`);
 
       await db
         .update(knowledgeItems)
@@ -87,43 +92,18 @@ export const embedKnowledgeItem = inngest.createFunction(
 // Failure hook — fires when all retries are exhausted
 // ---------------------------------------------------------------------------
 
-export const onEmbedKnowledgeItemFailure = inngest.createFunction(
-  {
-    id: "on-embed-knowledge-item-failure",
-    name: "Handle Knowledge Item Embedding Failure",
-    triggers: [{ event: "inngest/function.failed" }],
-  },
-  async ({ event, step }) => {
-    const failureData = event.data as Record<string, unknown>;
-    const original = failureData.event as {
-      name: string;
-      data: KnowledgeItemEmbedData;
-    };
-    if (original.name !== KNOWLEDGE_ITEM_EMBED_EVENT) return;
-
-    const { knowledgeItemId, workspaceId } = original.data;
-    const failedRunError = failureData.error as
-      | { message?: string; name?: string; stack?: string }
-      | undefined;
-    const errorMessage = failedRunError?.message ?? "Unknown error";
-
-    logger.error("embed_knowledge_item_failed", {
-      runId: failureData.run_id,
+export const onEmbedKnowledgeItemFailure = createFailureHandler<KnowledgeItemEmbedData>({
+  id: "on-embed-knowledge-item-failure",
+  name: "Handle Knowledge Item Embedding Failure",
+  eventName: KNOWLEDGE_ITEM_EMBED_EVENT,
+  logMessage: "embed_knowledge_item_failed",
+  onFailure: async ({ knowledgeItemId, workspaceId }, errorMessage) => {
+    await recordActivity({
       workspaceId,
-      knowledgeItemId,
-      errorMessage,
-      errorName: failedRunError?.name,
-      errorStack: failedRunError?.stack,
-    });
-
-    await step.run("log-failure", async () => {
-      await recordActivity({
-        workspaceId,
-        kind: "knowledge_item.embedding_failed",
-        entityType: "knowledge_item",
-        entityId: knowledgeItemId,
-        payload: { error: errorMessage },
-      });
+      kind: "knowledge_item.embedding_failed",
+      entityType: "knowledge_item",
+      entityId: knowledgeItemId,
+      payload: { error: errorMessage },
     });
   },
-);
+});

@@ -1,6 +1,11 @@
 import { NonRetriableError } from "inngest";
 import { eq, max } from "drizzle-orm";
-import { inngest, DRAFT_GENERATE_EVENT, type DraftGenerateData } from "@/lib/inngest";
+import {
+  createFailureHandler,
+  inngest,
+  DRAFT_GENERATE_EVENT,
+  type DraftGenerateData,
+} from "@/lib/inngest";
 import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
@@ -171,53 +176,24 @@ export const generateDraft = inngest.createFunction(
 /**
  * Failure hook — marks the draft as failed and records an activity.
  */
-export const onGenerateDraftFailure = inngest.createFunction(
-  {
-    id: "on-generate-draft-failure",
-    name: "Handle Draft Generation Failure",
-    triggers: [{ event: "inngest/function.failed" }],
-  },
-  async ({ event, step }) => {
-    const failureData = event.data as Record<string, unknown>;
-    const original = failureData.event as {
-      name: string;
-      data: DraftGenerateData;
-    };
-    if (original.name !== "email-gen/draft.generate") return;
+export const onGenerateDraftFailure = createFailureHandler<DraftGenerateData>({
+  id: "on-generate-draft-failure",
+  name: "Handle Draft Generation Failure",
+  eventName: DRAFT_GENERATE_EVENT,
+  logMessage: "generate_draft_failed",
+  onFailure: async ({ draftId, workspaceId }, errorMessage) => {
+    const db = getDb();
+    await db
+      .update(drafts)
+      .set({ generationStatus: "failed", generationError: errorMessage, updatedAt: new Date() })
+      .where(eq(drafts.id, draftId));
 
-    const { draftId, workspaceId } = original.data;
-    const failedRunError = failureData.error as
-      | { message?: string; name?: string; stack?: string }
-      | undefined;
-    const errorMessage = failedRunError?.message ?? "Unknown error";
-
-    logger.error("generate_draft_failed", {
-      runId: failureData.run_id,
+    await recordActivity({
       workspaceId,
-      draftId,
-      errorMessage,
-      errorName: failedRunError?.name,
-      errorStack: failedRunError?.stack,
-    });
-
-    await step.run("mark-failed", async () => {
-      const db = getDb();
-      await db
-        .update(drafts)
-        .set({
-          generationStatus: "failed",
-          generationError: errorMessage,
-          updatedAt: new Date(),
-        })
-        .where(eq(drafts.id, draftId));
-
-      await recordActivity({
-        workspaceId,
-        kind: "draft.generation_failed",
-        entityType: "draft",
-        entityId: draftId,
-        payload: { error: errorMessage },
-      });
+      kind: "draft.generation_failed",
+      entityType: "draft",
+      entityId: draftId,
+      payload: { error: errorMessage },
     });
   },
-);
+});
