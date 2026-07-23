@@ -9,11 +9,7 @@ function encodeHeaderValue(value: string): string {
 }
 
 function base64UrlEncode(value: string): string {
-  return Buffer.from(value, "utf-8")
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  return Buffer.from(value, "utf-8").toString("base64url");
 }
 
 /** Builds a minimal RFC 2822 message. `to` is omitted when unknown — Gmail
