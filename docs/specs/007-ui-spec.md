@@ -9,10 +9,10 @@ Describe the product surfaces that will be implemented on top of the workflow AP
 - Dashboard (`/dashboard`) — workspace identity, a compact create-opportunity form that hands off to the opportunity detail page, stat tiles (opportunities, ingesting now, awaiting approval, approved) linking out to the relevant list page, and a capped "needs attention" list surfacing failed ingestion/generation
 - Opportunities list (`/dashboard/opportunities`) — all opportunities with ingest status, auto-refreshing while ingestion runs
 - Opportunity detail (`/dashboard/opportunities/:id`) — extraction status, normalized fields, extraction metadata, ingest log, drafts, retry/re-ingest, generate, and delete actions
-- Draft editor (`/dashboard/drafts/:id`) — editable subject/body (revise), evidence panel showing the knowledge items cited by the generated version, approval with optional reviewer note, copy to clipboard
+- Draft editor (`/dashboard/drafts/:id`) — editable subject/body (revise), evidence panel showing the knowledge items cited by the generated version, approval with optional reviewer note, copy to clipboard, and export to Gmail drafts once approved (button ships disabled with a tooltip until Google OAuth client setup is complete)
 - Approval queue (`/dashboard/approvals`) — drafts with completed generation awaiting approval, quick approve or open-for-review
 - Knowledge hub (`/dashboard/knowledge`) — add and list knowledge items with embedding status
-- Workspace settings (`/dashboard/settings`) — workspace record facts plus Clerk organization profile for members and roles
+- Workspace settings (`/dashboard/settings`) — workspace record facts plus Better-Auth organization profile for members and roles
 
 Persistent section navigation is rendered under the dashboard header.
 

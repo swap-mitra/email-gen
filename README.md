@@ -176,7 +176,7 @@ The dashboard and API routes can request AI generation and Gmail export, but eve
 - [`src/lib/workflows`](src/lib/workflows) — Inngest functions for ingest, generate, and embed.
 - [`src/db/schema.ts`](src/db/schema.ts) — the Drizzle schema; `drizzle/` holds generated migrations.
 - [`scripts/apply-indexes.mjs`](scripts/apply-indexes.mjs) — applies the hand-written index SQL `db:push` can't see.
-- [`docs/specs`](docs/specs) — the spec-driven implementation roadmap (gitignored, local-only).
+- [`docs/specs`](docs/specs) — the spec-driven implementation roadmap, tracked in the repository.
 
 ## Features
 

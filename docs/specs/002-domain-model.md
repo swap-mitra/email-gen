@@ -6,16 +6,14 @@ Define the durable entities that support a multi-workspace outreach workflow pro
 
 ## Core entities
 
-- `Organization`
-- `Workspace`
-- `Membership`
+- `Workspace` — a thin uuid-keyed mirror of Better-Auth's `organization` table; membership and role are sourced live from Better-Auth's own `member`/`organization` tables, not mirrored locally (see [006 Auth + Tenancy Spec](006-auth-tenancy-spec.md))
 - `Opportunity`
 - `KnowledgeItem`
 - `Draft`
 - `DraftVersion`
 - `Approval`
 - `Activity`
-- `DeliveryAccount` and `SendJob` for future delivery support
+- `DeliveryAccount`, `SendJob`, `SendAttempt` for delivery (see [010 Delivery Spec](010-future-delivery-spec.md))
 
 ## Workflow rules
 
@@ -24,8 +22,9 @@ Define the durable entities that support a multi-workspace outreach workflow pro
 - `DraftVersion` is append-only
 - `Approval` is explicit and reviewer-attributed
 - `Activity` records user and system events across the workflow
+- `SendJob` records each export attempt independent of the draft's own state; `SendAttempt` records each underlying provider call for a `SendJob`
 
 ## Tenancy
 
-- Every durable business record carries `workspace_id`
-- Cross-workspace queries are invalid by default
+- Every durable business record carries `workspaceId`
+- Cross-workspace queries are invalid by default and rejected at the API layer
