@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { reciprocalRankFusion, maximalMarginalRelevance } from "@/lib/ai/retrieval";
 import { toNormalizedFields, aiExtractedFieldsSchema } from "@/lib/ai/extraction";
 import { generatedDraftSchema, generateDraftEmail } from "@/lib/ai/generation";
-import { embedQueryText, embedDocumentText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
+import { embedText, isEmbeddingConfigured } from "@/lib/ai/embeddings";
 import { chatJson, isOpenRouterConfigured } from "@/lib/ai/openrouter-client";
 import type { FetchedContent } from "@/lib/ingestion/fetch-content";
 
@@ -54,14 +54,8 @@ describe("P5 AI — embeddings configuration guard", () => {
     expect(isEmbeddingConfigured()).toBe(true);
   });
 
-  it("embedQueryText throws a descriptive error when unconfigured", async () => {
-    await expect(embedQueryText("some query")).rejects.toThrow("OPENROUTER_API_KEY must be set");
-  });
-
-  it("embedDocumentText throws a descriptive error when unconfigured", async () => {
-    await expect(embedDocumentText("some knowledge content")).rejects.toThrow(
-      "OPENROUTER_API_KEY must be set",
-    );
+  it("embedText throws a descriptive error when unconfigured", async () => {
+    await expect(embedText("some query")).rejects.toThrow("OPENROUTER_API_KEY must be set");
   });
 });
 

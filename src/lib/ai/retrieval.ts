@@ -1,7 +1,7 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { knowledgeItems, type KnowledgeItem } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { embedQueryText, isEmbeddingConfigured, EMBEDDING_DIMENSIONS } from "@/lib/ai/embeddings";
+import { embedText, isEmbeddingConfigured, EMBEDDING_DIMENSIONS } from "@/lib/ai/embeddings";
 
 // pgvector's index types (HNSW/IVFFlat) cap indexed columns at 2000
 // dimensions for `vector`. This model's 2048-dim output exceeds that, so
@@ -131,7 +131,7 @@ export async function retrieveKnowledgeForOpportunity(args: {
   let vectorIds: string[] = [];
   if (isEmbeddingConfigured()) {
     try {
-      const queryEmbedding = await embedQueryText(queryText);
+      const queryEmbedding = await embedText(queryText);
       const vectorLiteral = `[${queryEmbedding.join(",")}]`;
       const vectorRows = await db
         .select({ id: knowledgeItems.id })

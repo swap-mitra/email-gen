@@ -19,7 +19,8 @@ function requireApiKey(): string {
   return apiKey;
 }
 
-async function embedContent(text: string): Promise<number[]> {
+/** Embeds text (query or document) via OpenRouter. Throws if OPENROUTER_API_KEY is not configured. */
+export async function embedText(text: string): Promise<number[]> {
   const apiKey = requireApiKey();
 
   const res = await fetch(`${OPENROUTER_API_URL}/embeddings`, {
@@ -46,14 +47,4 @@ async function embedContent(text: string): Promise<number[]> {
     throw new Error("OpenRouter embeddings response did not include an embedding vector.");
   }
   return embedding;
-}
-
-/** Embeds a search query. Throws if OPENROUTER_API_KEY is not configured. */
-export async function embedQueryText(text: string): Promise<number[]> {
-  return embedContent(text);
-}
-
-/** Embeds a knowledge item for indexing. Throws if OPENROUTER_API_KEY is not configured. */
-export async function embedDocumentText(text: string): Promise<number[]> {
-  return embedContent(text);
 }
