@@ -20,49 +20,13 @@ export type FetchedContent = {
 };
 
 /**
- * Attempt to fetch a URL directly and extract its readable text content.
- *
- * Strategy:
- *  1. Fetch with a realistic User-Agent and timeout.
- *  2. Remove all noise elements (scripts, styles, nav, footer, ads).
- *  3. Prefer <main> / <article> / [role="main"] over bare <body>.
- *  4. Return isInsufficient=true when text is too short → triggers Playwright fallback.
+ * Strips noise elements and pulls readable text/title/description out of raw
+ * HTML. Shared by the direct fetch path here and the Playwright-rendered
+ * path in browser-fallback.ts — same markup, same extraction rules.
  */
-export async function fetchAndExtractContent(url: string): Promise<FetchedContent> {
-  // Manual redirect handling: each hop is re-validated against
-  // assertPublicHttpUrl so a public URL can't 302 into an internal address
-  // (the most common real-world SSRF bypass).
-  let currentUrl = url;
-  let response: Response | undefined;
-
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicHttpUrl(currentUrl);
-
-    response = await fetch(currentUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; EmailGenAI/1.0; +https://emailgenai.com/bot)",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      redirect: "manual",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location) break;
-      currentUrl = new URL(location, currentUrl).toString();
-      continue;
-    }
-    break;
-  }
-
-  if (!response) {
-    throw new Error("Failed to fetch the source URL.");
-  }
-
-  const rawHtml = await response.text();
+export function extractReadableContent(
+  rawHtml: string,
+): Pick<FetchedContent, "text" | "title" | "description"> {
   const $ = cheerio.load(rawHtml);
 
   // ── Strip noise ────────────────────────────────────────────────────────
@@ -108,17 +72,66 @@ export async function fetchAndExtractContent(url: string): Promise<FetchedConten
   const contentEl =
     $("main, article, [role='main'], .job-description, #job-description").first();
 
-  const rawText = (contentEl.length > 0 ? contentEl : $("body"))
+  const text = (contentEl.length > 0 ? contentEl : $("body"))
     .text()
     .replace(/\s+/g, " ")
     .trim();
 
+  return { text, title, description };
+}
+
+/**
+ * Attempt to fetch a URL directly and extract its readable text content.
+ *
+ * Strategy:
+ *  1. Fetch with a realistic User-Agent and timeout.
+ *  2. Remove all noise elements (scripts, styles, nav, footer, ads).
+ *  3. Prefer <main> / <article> / [role="main"] over bare <body>.
+ *  4. Return isInsufficient=true when text is too short → triggers Playwright fallback.
+ */
+export async function fetchAndExtractContent(url: string): Promise<FetchedContent> {
+  // Manual redirect handling: each hop is re-validated against
+  // assertPublicHttpUrl so a public URL can't 302 into an internal address
+  // (the most common real-world SSRF bypass).
+  let currentUrl = url;
+  let response: Response | undefined;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    await assertPublicHttpUrl(currentUrl);
+
+    response = await fetch(currentUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; EmailGenAI/1.0; +https://emailgenai.com/bot)",
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) break;
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+    break;
+  }
+
+  if (!response) {
+    throw new Error("Failed to fetch the source URL.");
+  }
+
+  const rawHtml = await response.text();
+  const { text, title, description } = extractReadableContent(rawHtml);
+
   return {
     rawHtml,
-    text: rawText,
+    text,
     title,
     description,
-    isInsufficient: rawText.length < MIN_CONTENT_LENGTH,
+    isInsufficient: text.length < MIN_CONTENT_LENGTH,
     statusCode: response.status,
   };
 }

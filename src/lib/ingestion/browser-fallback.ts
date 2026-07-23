@@ -1,5 +1,4 @@
-import * as cheerio from "cheerio";
-import type { FetchedContent } from "./fetch-content";
+import { extractReadableContent, type FetchedContent } from "./fetch-content";
 
 const BROWSERBASE_API_URL = "https://api.browserbase.com/v1";
 const NAVIGATION_TIMEOUT_MS = 30_000;
@@ -57,47 +56,6 @@ async function releaseSession(apiKey: string, sessionId: string): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
-// Content extraction (mirrors fetch-content.ts logic using cheerio)
-// ---------------------------------------------------------------------------
-
-function extractFromHtml(rawHtml: string): Pick<FetchedContent, "text" | "title" | "description"> {
-  const $ = cheerio.load(rawHtml);
-
-  // Strip noise — same ruleset as direct fetch
-  $(
-    [
-      "script", "style", "noscript", "svg",
-      "img", "picture", "video", "audio", "iframe",
-      "nav", "footer", "header", "aside",
-      "[role='navigation']", "[role='banner']", "[role='complementary']",
-      "[aria-hidden='true']", ".cookie-banner", "#cookie-banner",
-      ".ad", ".advertisement",
-    ].join(", "),
-  ).remove();
-
-  const title =
-    $("title").first().text().trim() ||
-    $("h1").first().text().trim() ||
-    null;
-
-  const description =
-    $("meta[name='description']").attr("content")?.trim() ||
-    $("meta[property='og:description']").attr("content")?.trim() ||
-    null;
-
-  const contentEl = $(
-    "main, article, [role='main'], .job-description, #job-description",
-  ).first();
-
-  const text = (contentEl.length > 0 ? contentEl : $("body"))
-    .text()
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return { text, title, description };
-}
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -147,7 +105,7 @@ export async function browserbaseFetch(url: string): Promise<BrowserFallbackResu
       await page.waitForTimeout(POST_LOAD_WAIT_MS);
 
       const rawHtml = await page.content();
-      const { text, title, description } = extractFromHtml(rawHtml);
+      const { text, title, description } = extractReadableContent(rawHtml);
 
       return {
         rawHtml,
