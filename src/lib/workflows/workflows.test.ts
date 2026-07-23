@@ -14,12 +14,12 @@ import {
 
 describe("P3 Async Workflows (Inngest)", () => {
   it("defines the correct event constants", () => {
-    expect(OPPORTUNITY_INGEST_EVENT).toBe("email-gen/opportunity.ingest");
-    expect(DRAFT_GENERATE_EVENT).toBe("email-gen/draft.generate");
+    expect(OPPORTUNITY_INGEST_EVENT).toBe("groundwork/opportunity.ingest");
+    expect(DRAFT_GENERATE_EVENT).toBe("groundwork/draft.generate");
   });
 
   it("configures Inngest client with correct app id", () => {
-    expect(inngest.id).toBe("email-gen");
+    expect(inngest.id).toBe("groundwork");
   });
 
   it("registers ingestOpportunity function with correct triggers & options", () => {
@@ -48,7 +48,7 @@ describe("P3 Async Workflows (Inngest)", () => {
 
 describe("P5 AI + Retrieval — embed-knowledge-item workflow", () => {
   it("defines the correct event constant", () => {
-    expect(KNOWLEDGE_ITEM_EMBED_EVENT).toBe("email-gen/knowledge-item.embed");
+    expect(KNOWLEDGE_ITEM_EMBED_EVENT).toBe("groundwork/knowledge-item.embed");
   });
 
   it("registers embedKnowledgeItem function with correct triggers & options", () => {

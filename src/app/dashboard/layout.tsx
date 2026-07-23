@@ -15,7 +15,7 @@ export default function DashboardLayout({
       <header className="site-header">
         <div className="site-header-inner">
           <Link className="brand" href="/dashboard">
-            Email GenAI
+            Groundwork
             <span className="brand-badge">Workspace</span>
           </Link>
           <nav className="header-nav header-nav--account">

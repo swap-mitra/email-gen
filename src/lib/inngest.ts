@@ -1,13 +1,13 @@
 import { Inngest } from "inngest";
 import { logger } from "@/lib/logger";
 
-export const OPPORTUNITY_INGEST_EVENT = "email-gen/opportunity.ingest" as const;
-export const DRAFT_GENERATE_EVENT = "email-gen/draft.generate" as const;
-export const KNOWLEDGE_ITEM_EMBED_EVENT = "email-gen/knowledge-item.embed" as const;
+export const OPPORTUNITY_INGEST_EVENT = "groundwork/opportunity.ingest" as const;
+export const DRAFT_GENERATE_EVENT = "groundwork/draft.generate" as const;
+export const KNOWLEDGE_ITEM_EMBED_EVENT = "groundwork/knowledge-item.embed" as const;
 
 export const inngest = new Inngest({
-  id: "email-gen",
-  name: "Email GenAI",
+  id: "groundwork",
+  name: "Groundwork",
 });
 
 // Explicit payload types — used for event.data casts in workflow handlers

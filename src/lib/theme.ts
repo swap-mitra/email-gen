@@ -1,6 +1,6 @@
 export type Theme = "light" | "dark";
 
-export const THEME_STORAGE_KEY = "email-gen-theme";
+export const THEME_STORAGE_KEY = "groundwork-theme";
 
 /**
  * Executed inline, before hydration, so the correct theme is applied to

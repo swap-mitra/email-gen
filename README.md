@@ -1,6 +1,8 @@
-# Email GenAI
+# Groundwork
 
-**Email GenAI** turns a company or job URL into a grounded, evidence-backed outbound email — extracted, drafted, and reviewed inside a multi-tenant workspace, with delivery kept one deliberate human action away from irreversible.
+*Do the groundwork before you say a word.*
+
+**Groundwork** turns a company or job URL into a grounded, evidence-backed outbound email — extracted, drafted, and reviewed inside a multi-tenant workspace, with delivery kept one deliberate human action away from irreversible.
 
 The project is built around one principle: **agentic drafting should be observable and reversible before it leaves the workspace.**
 
@@ -27,7 +29,7 @@ The project is built around one principle: **agentic drafting should be observab
 
 An AI can reasonably extract a job posting, retrieve the right proof points, and draft a cold outreach email. That's useful, but the failure mode is real: a wrong claim, an ungrounded pitch, or a sent email to the wrong contact doesn't undo itself.
 
-Email GenAI never lets the model send anything directly. It can only produce a `Draft` — versioned, tied to the evidence it cited, and held for review until a human explicitly approves it. Delivery itself (Gmail draft export) writes into the reviewer's own Gmail drafts folder, not their sent mail — so even after approval, sending is still a separate, manual, human act.
+Groundwork never lets the model send anything directly. It can only produce a `Draft` — versioned, tied to the evidence it cited, and held for review until a human explicitly approves it. Delivery itself (Gmail draft export) writes into the reviewer's own Gmail drafts folder, not their sent mail — so even after approval, sending is still a separate, manual, human act.
 
 This gives the system three practical safety properties:
 

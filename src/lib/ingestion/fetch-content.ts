@@ -102,7 +102,7 @@ export async function fetchAndExtractContent(url: string): Promise<FetchedConten
     response = await fetch(currentUrl, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; EmailGenAI/1.0; +https://emailgenai.com/bot)",
+          "Mozilla/5.0 (compatible; Groundwork/1.0; +https://groundwork.app/bot)",
         Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "en-US,en;q=0.9",
       },

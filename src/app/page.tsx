@@ -21,7 +21,7 @@ export default async function Home() {
       <header className="site-header">
         <div className="site-header-inner">
           <div className="brand">
-            Email GenAI
+            Groundwork
             <span className="brand-badge">Beta</span>
           </div>
           <nav className="header-nav">
@@ -38,12 +38,12 @@ export default async function Home() {
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <main className="page-shell">
         <section className="landing-hero">
-          <p className="hero-kicker">Outbound workflow platform</p>
+          <p className="hero-kicker">Do the groundwork before you say a word.</p>
           <h1 className="t-display hero-headline">
             Outreach from real signals, not <em>copy-paste</em> prompts.
           </h1>
           <p className="hero-body">
-            Email GenAI turns a company or hiring URL into a structured opportunity, grounds the
+            Groundwork turns a company or hiring URL into a structured opportunity, grounds the
             message in your team&apos;s proof points, and routes every draft through a reviewable
             workspace workflow.
           </p>

@@ -4,9 +4,9 @@ import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Email GenAI",
+  title: "Groundwork",
   description:
-    "Turn a company or hiring URL into a structured opportunity, ground the message in your team's proof points, and route every draft through a reviewable workspace workflow.",
+    "Do the groundwork before you say a word. Turn a company or hiring URL into a structured opportunity, ground the message in your team's proof points, and route every draft through a reviewable workspace workflow.",
 };
 
 export default function RootLayout({

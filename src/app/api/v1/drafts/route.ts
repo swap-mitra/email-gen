@@ -9,7 +9,7 @@ import {
 import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
-import { inngest } from "@/lib/inngest";
+import { DRAFT_GENERATE_EVENT, inngest } from "@/lib/inngest";
 import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { requireWorkspaceContext } from "@/lib/workspaces";
 
@@ -132,7 +132,7 @@ export const POST = apiRoute("Failed to create draft.", async (req: Request) => 
 
   await inngest.send({
     id: `draft-generate-${draft.id}`,
-    name: "email-gen/draft.generate",
+    name: DRAFT_GENERATE_EVENT,
     data: {
       draftId: draft.id,
       workspaceId: context.workspace.id,
