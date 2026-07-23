@@ -53,6 +53,33 @@ export function createApiErrorResponse({
 }
 
 // ---------------------------------------------------------------------------
+// Route wrapper
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps a route handler so an uncaught error becomes a consistent
+ * `internal_error` response instead of every handler repeating the same
+ * try/catch.
+ */
+export function apiRoute<Args extends unknown[]>(
+  fallbackMessage: string,
+  handler: (...args: Args) => Promise<NextResponse>,
+): (...args: Args) => Promise<NextResponse> {
+  return async (...args: Args) => {
+    try {
+      return await handler(...args);
+    } catch (error) {
+      return createApiErrorResponse({
+        code: "internal_error",
+        message: error instanceof Error ? error.message : fallbackMessage,
+        status: 500,
+        cause: error,
+      });
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Request body parsing
 // ---------------------------------------------------------------------------
 

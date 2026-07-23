@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
-import { createApiErrorResponse, parseBody } from "@/lib/api";
+import { apiRoute, createApiErrorResponse, parseBody } from "@/lib/api";
 import { exportDraftRequestSchema, exportDraftResponseSchema } from "@/lib/contracts/api";
 import {
   deliveryAccounts,
@@ -14,7 +14,7 @@ import { recordActivity } from "@/lib/activity";
 import { DeliveryError, type DeliveryErrorReason } from "@/lib/delivery/errors";
 import { deliveryProviders } from "@/lib/delivery/registry";
 import { getDb } from "@/lib/db";
-import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { requireWorkspaceContext } from "@/lib/workspaces";
 
 /** Maps a delivery failure reason to the HTTP shape it should surface as. */
 function errorResponseForReason(reason: DeliveryErrorReason, message: string) {
@@ -28,28 +28,11 @@ function errorResponseForReason(reason: DeliveryErrorReason, message: string) {
   });
 }
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const context = await getActiveWorkspaceContext();
-
-    if (!context.userId) {
-      return createApiErrorResponse({
-        code: "unauthorized",
-        message: "Authentication is required.",
-        status: 401,
-      });
-    }
-
-    if (!context.workspace) {
-      return createApiErrorResponse({
-        code: "forbidden",
-        message: "An active workspace is required.",
-        status: 403,
-      });
-    }
+export const POST = apiRoute(
+  "Failed to export draft.",
+  async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { context, response } = await requireWorkspaceContext();
+    if (response) return response;
 
     const { id } = await params;
     const { data, error } = await parseBody(req, exportDraftRequestSchema);
@@ -218,12 +201,5 @@ export async function POST(
 
       return errorResponseForReason(reason, message);
     }
-  } catch (error) {
-    return createApiErrorResponse({
-      code: "internal_error",
-      message: error instanceof Error ? error.message : "Failed to export draft.",
-      status: 500,
-      cause: error,
-    });
-  }
-}
+  },
+);

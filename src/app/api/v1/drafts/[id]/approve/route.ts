@@ -1,34 +1,17 @@
 import { NextResponse } from "next/server";
 import { eq, and, desc } from "drizzle-orm";
-import { createApiErrorResponse, parseBody } from "@/lib/api";
+import { apiRoute, createApiErrorResponse, parseBody } from "@/lib/api";
 import { approveDraftRequestSchema, approvalSchema } from "@/lib/contracts/api";
 import { approvals, drafts, draftVersions } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
-import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { requireWorkspaceContext } from "@/lib/workspaces";
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const context = await getActiveWorkspaceContext();
-
-    if (!context.userId) {
-      return createApiErrorResponse({
-        code: "unauthorized",
-        message: "Authentication is required.",
-        status: 401,
-      });
-    }
-
-    if (!context.workspace) {
-      return createApiErrorResponse({
-        code: "forbidden",
-        message: "An active workspace is required.",
-        status: 403,
-      });
-    }
+export const POST = apiRoute(
+  "Failed to approve draft.",
+  async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { context, response } = await requireWorkspaceContext();
+    if (response) return response;
 
     const { id } = await params;
     const { data, error } = await parseBody(req, approveDraftRequestSchema);
@@ -37,10 +20,7 @@ export async function POST(
     const db = getDb();
 
     const draft = await db.query.drafts.findFirst({
-      where: and(
-        eq(drafts.id, id),
-        eq(drafts.workspaceId, context.workspace.id),
-      ),
+      where: and(eq(drafts.id, id), eq(drafts.workspaceId, context.workspace.id)),
     });
 
     if (!draft) {
@@ -104,12 +84,5 @@ export async function POST(
     });
 
     return NextResponse.json(approvalSchema.parse(approval), { status: 201 });
-  } catch (error) {
-    return createApiErrorResponse({
-      code: "internal_error",
-      message: error instanceof Error ? error.message : "Failed to approve draft.",
-      status: 500,
-      cause: error,
-    });
-  }
-}
+  },
+);

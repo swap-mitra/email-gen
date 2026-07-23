@@ -1,42 +1,22 @@
 import { NextResponse } from "next/server";
 import { eq, and, desc, inArray } from "drizzle-orm";
-import { createApiErrorResponse } from "@/lib/api";
+import { apiRoute, createApiErrorResponse } from "@/lib/api";
 import { draftSchema, knowledgeItemSchema } from "@/lib/contracts/api";
 import { drafts, draftVersions, knowledgeItems, sendJobs } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { requireWorkspaceContext } from "@/lib/workspaces";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const context = await getActiveWorkspaceContext();
-
-    if (!context.userId) {
-      return createApiErrorResponse({
-        code: "unauthorized",
-        message: "Authentication is required.",
-        status: 401,
-      });
-    }
-
-    if (!context.workspace) {
-      return createApiErrorResponse({
-        code: "forbidden",
-        message: "An active workspace is required.",
-        status: 403,
-      });
-    }
+export const GET = apiRoute(
+  "Failed to fetch draft.",
+  async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { context, response } = await requireWorkspaceContext();
+    if (response) return response;
 
     const { id } = await params;
     const db = getDb();
 
     const draft = await db.query.drafts.findFirst({
-      where: and(
-        eq(drafts.id, id),
-        eq(drafts.workspaceId, context.workspace.id),
-      ),
+      where: and(eq(drafts.id, id), eq(drafts.workspaceId, context.workspace.id)),
       with: {
         versions: {
           orderBy: [desc(draftVersions.versionNumber)],
@@ -83,12 +63,5 @@ export async function GET(
       evidence,
       latestSendJobAccountEmail: latestSendJob?.deliveryAccount?.externalAccountEmail ?? null,
     });
-  } catch (error) {
-    return createApiErrorResponse({
-      code: "internal_error",
-      message: error instanceof Error ? error.message : "Failed to fetch draft.",
-      status: 500,
-      cause: error,
-    });
-  }
-}
+  },
+);

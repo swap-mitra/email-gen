@@ -1,48 +1,28 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
-import { createApiErrorResponse } from "@/lib/api";
+import { apiRoute, createApiErrorResponse } from "@/lib/api";
 import { opportunitySchema } from "@/lib/contracts/api";
 import { activities, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 import { inngest, OPPORTUNITY_INGEST_EVENT } from "@/lib/inngest";
 import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
-import { getActiveWorkspaceContext } from "@/lib/workspaces";
+import { requireWorkspaceContext } from "@/lib/workspaces";
 
 const REINGEST_RATE_LIMIT_MAX = 10;
 const REINGEST_RATE_LIMIT_WINDOW_MINUTES = 10;
 
-export async function POST(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const context = await getActiveWorkspaceContext();
-
-    if (!context.userId) {
-      return createApiErrorResponse({
-        code: "unauthorized",
-        message: "Authentication is required.",
-        status: 401,
-      });
-    }
-
-    if (!context.workspace) {
-      return createApiErrorResponse({
-        code: "forbidden",
-        message: "An active workspace is required.",
-        status: 403,
-      });
-    }
+export const POST = apiRoute(
+  "Failed to reingest opportunity.",
+  async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { context, response } = await requireWorkspaceContext();
+    if (response) return response;
 
     const { id } = await params;
     const db = getDb();
 
     const existing = await db.query.opportunities.findFirst({
-      where: and(
-        eq(opportunities.id, id),
-        eq(opportunities.workspaceId, context.workspace.id),
-      ),
+      where: and(eq(opportunities.id, id), eq(opportunities.workspaceId, context.workspace.id)),
     });
 
     if (!existing) {
@@ -118,12 +98,5 @@ export async function POST(
     });
 
     return NextResponse.json(opportunitySchema.parse(updated));
-  } catch (error) {
-    return createApiErrorResponse({
-      code: "internal_error",
-      message: error instanceof Error ? error.message : "Failed to reingest opportunity.",
-      status: 500,
-      cause: error,
-    });
-  }
-}
+  },
+);

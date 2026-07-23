@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import type { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import {
   workspaces,
@@ -7,10 +8,19 @@ import {
   type Workspace,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { createApiErrorResponse } from "@/lib/api";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
 
 type Membership = typeof member.$inferSelect;
+
+/** The active-workspace context once a signed-in user's workspace is resolved. */
+export type WorkspaceContext = {
+  userId: string;
+  orgId: string;
+  workspace: Workspace;
+  membership: Membership;
+};
 
 type ActiveWorkspaceContext =
   | {
@@ -127,4 +137,39 @@ export async function getActiveWorkspaceContext(): Promise<ActiveWorkspaceContex
     workspace,
     membership,
   };
+}
+
+/**
+ * Resolves the active workspace context for an API route, or the
+ * ready-to-return error response (401 unauthenticated / 403 no active
+ * workspace) if it isn't available.
+ */
+export async function requireWorkspaceContext(): Promise<
+  { context: WorkspaceContext; response: null } | { context: null; response: NextResponse }
+> {
+  const context = await getActiveWorkspaceContext();
+
+  if (!context.userId) {
+    return {
+      context: null,
+      response: createApiErrorResponse({
+        code: "unauthorized",
+        message: "Authentication is required.",
+        status: 401,
+      }),
+    };
+  }
+
+  if (!context.workspace) {
+    return {
+      context: null,
+      response: createApiErrorResponse({
+        code: "forbidden",
+        message: "An active workspace is required.",
+        status: 403,
+      }),
+    };
+  }
+
+  return { context, response: null };
 }
