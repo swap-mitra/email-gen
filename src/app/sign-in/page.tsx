@@ -27,8 +27,8 @@ export default function SignInPage() {
       <div className="auth-card">
         <h1 className="page-title">Sign in</h1>
         <p className="page-intro">
-          Sign in with the Google account you want to use for outreach — the same account is used
-          later for Gmail draft export.
+          Sign in with the Google account you want to use — the same account is used later for
+          Gmail draft export.
         </p>
         <button className="btn btn-primary" onClick={handleSignIn} disabled={isSigningIn}>
           {isSigningIn ? "Redirecting…" : "Continue with Google"}
