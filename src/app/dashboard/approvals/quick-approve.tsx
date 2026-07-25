@@ -27,6 +27,10 @@ export function QuickApprove({ draftId }: { draftId: string }) {
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to approve draft.");
+    } finally {
+      // The approved row drops out of the queue on refresh, but don't rely on
+      // that — leaving this set pinned the button at "Approving…" for good if
+      // it didn't.
       setIsApproving(false);
     }
   }
