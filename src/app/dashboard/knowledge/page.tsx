@@ -9,6 +9,14 @@ import { KnowledgeForm } from "./knowledge-form";
 
 export const dynamic = "force-dynamic";
 
+// ponytail: age heuristic. knowledge_items has no failed/skipped column, so a
+// row that never embeds (embed-knowledge-item.ts bails on both a missing API
+// key and a provider error) is indistinguishable from one still in the queue —
+// which used to mean "embedding" forever and a 3s refresh loop that never
+// stopped. Treat "unembedded and older than the window" as done-and-failed.
+// Upgrade path: add an embedding_status column and read it directly.
+const EMBEDDING_WINDOW_MS = 5 * 60_000;
+
 function contentPreview(content: string, max = 160): string {
   const flat = content.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max)}…` : flat;
@@ -34,7 +42,10 @@ export default async function KnowledgePage() {
     .orderBy(desc(knowledgeItems.createdAt))
     .limit(100);
 
-  const embeddingInProgress = items.some((item) => !item.embedded);
+  const now = Date.now();
+  const isEmbedding = (item: { embedded: boolean; createdAt: Date }) =>
+    !item.embedded && now - item.createdAt.getTime() < EMBEDDING_WINDOW_MS;
+  const embeddingInProgress = items.some(isEmbedding);
 
   return (
     <>
@@ -89,8 +100,15 @@ export default async function KnowledgePage() {
                     <td>
                       {item.embedded ? (
                         <span className="opp-badge opp-badge-completed">embedded</span>
-                      ) : (
+                      ) : isEmbedding(item) ? (
                         <span className="opp-badge opp-badge-running">embedding</span>
+                      ) : (
+                        <span
+                          className="opp-badge opp-badge-failed"
+                          title="This item has no embedding, so it can't be retrieved when drafts are generated."
+                        >
+                          not embedded
+                        </span>
                       )}
                     </td>
                     <td className="cell-time">{formatDateTime(item.createdAt)}</td>
