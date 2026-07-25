@@ -13,18 +13,27 @@ export function OrgSwitcher() {
   async function handleSwitch(organizationId: string) {
     if (!organizationId || organizationId === activeOrganization?.id) return;
     setIsSwitching(true);
-    await authClient.organization.setActive({ organizationId });
+    const { error } = await authClient.organization.setActive({ organizationId });
+    setIsSwitching(false);
+    if (error) {
+      // The select re-derives its value from activeOrganization, which didn't
+      // change — so it snaps back on its own. Navigating here would have shown
+      // the old workspace's data as though the switch had worked.
+      window.alert(error.message ?? "Could not switch workspace.");
+      return;
+    }
     router.push("/dashboard");
     router.refresh();
-    setIsSwitching(false);
   }
 
-  if (!organizations || organizations.length <= 1) return null;
+  // Wait for the active org too — rendering with value="" matches no <option>,
+  // which paints the switcher blank.
+  if (!organizations || organizations.length <= 1 || !activeOrganization) return null;
 
   return (
     <select
       className="org-switcher"
-      value={activeOrganization?.id ?? ""}
+      value={activeOrganization.id}
       disabled={isSwitching}
       onChange={(e) => handleSwitch(e.target.value)}
     >
