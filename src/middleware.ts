@@ -30,7 +30,11 @@ export function middleware(request: NextRequest) {
   // authorization happens at the route/page level via
   // getActiveWorkspaceContext(), same division of responsibility as before.
   if (!getSessionCookie(request)) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    const signIn = new URL("/sign-in", request.url);
+    // Carry the requested page through the OAuth round trip so deep links
+    // (invitation URLs especially) survive being bounced to sign-in.
+    signIn.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(signIn);
   }
 
   return NextResponse.next();

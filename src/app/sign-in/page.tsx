@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
+import { callbackTarget } from "./callback-target";
 
 export default function SignInPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -12,7 +13,10 @@ export default function SignInPage() {
     setError(null);
     setIsSigningIn(true);
     try {
-      await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" });
+      // Read at click time rather than via useSearchParams() — keeps this page
+      // statically renderable without a Suspense boundary.
+      const callbackURL = callbackTarget(window.location.search);
+      await authClient.signIn.social({ provider: "google", callbackURL });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start Google sign-in.");
       setIsSigningIn(false);
