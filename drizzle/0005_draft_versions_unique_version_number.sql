@@ -1,0 +1,17 @@
+-- Uniqueness for (draft_id, version_number).
+--
+-- Both writers of draft_versions number a new row by reading
+-- max(version_number) and adding one, which races: two concurrent revisions,
+-- or an Inngest step retried after the insert landed, compute the same number.
+-- Readers are all `order by version_number desc limit 1`, so a duplicate makes
+-- one revision silently invisible rather than raising anything.
+--
+-- Written as a unique INDEX rather than a table constraint in schema.ts:
+-- drizzle-kit 0.31 introspects a two-column unique constraint with its columns
+-- reversed, so `db:push` never matches its own constraint and re-proposes it
+-- every run — offering to TRUNCATE draft_versions as the way to apply it. A
+-- unique index enforces identically (still SQLSTATE 23505, which
+-- insertNextDraftVersion retries on) and is invisible to that diff.
+--
+-- Applied by `npm run db:indexes`, like every other index here.
+CREATE UNIQUE INDEX IF NOT EXISTS "draft_versions_draft_id_version_number_uidx" ON "draft_versions" ("draft_id","version_number");

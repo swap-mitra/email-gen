@@ -27,10 +27,10 @@ function isUniqueViolation(error: unknown): boolean {
  * reader is `order by version_number desc limit 1`, so the loser doesn't
  * error, it just silently disappears from the editor and from approvals.
  *
- * The subquery narrows the window to a single statement, and the unique
- * constraint on (draft_id, version_number) closes the rest: a collision fails
- * the insert rather than duplicating a number, and one retry re-reads the
- * now-committed maximum.
+ * The subquery narrows the window to a single statement, and the unique index
+ * on (draft_id, version_number) — drizzle/0005_*.sql, applied by
+ * `npm run db:indexes` — closes the rest: a collision fails the insert rather
+ * than duplicating a number, and one retry re-reads the now-committed maximum.
  */
 export async function insertNextDraftVersion(version: NewDraftVersion) {
   const db = getDb();
