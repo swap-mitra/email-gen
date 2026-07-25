@@ -1,5 +1,5 @@
 import { NonRetriableError } from "inngest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   createFailureHandler,
   inngest,
@@ -40,10 +40,16 @@ export const ingestOpportunity = inngest.createFunction(
     // ── Step 1: Mark as running ──────────────────────────────────────────
     await step.run("mark-running", async () => {
       const db = getDb();
+      // Scoped by workspace as well as id: every row this workflow touches is
+      // addressed by an id taken from the event payload, so the workspace it
+      // claims to belong to is worth verifying rather than trusting — the API
+      // routes scope every equivalent lookup the same way.
       await db
         .update(opportunities)
         .set({ ingestStatus: "running", updatedAt: new Date() })
-        .where(eq(opportunities.id, opportunityId));
+        .where(
+          and(eq(opportunities.id, opportunityId), eq(opportunities.workspaceId, workspaceId)),
+        );
 
       await recordActivity({
         workspaceId,
@@ -59,12 +65,15 @@ export const ingestOpportunity = inngest.createFunction(
       const db = getDb();
 
       const opportunity = await db.query.opportunities.findFirst({
-        where: eq(opportunities.id, opportunityId),
+        where: and(
+          eq(opportunities.id, opportunityId),
+          eq(opportunities.workspaceId, workspaceId),
+        ),
       });
 
       if (!opportunity) {
         throw new NonRetriableError(
-          `Opportunity ${opportunityId} not found — aborting ingestion.`,
+          `Opportunity ${opportunityId} not found in workspace ${workspaceId} — aborting ingestion.`,
         );
       }
 
@@ -228,7 +237,9 @@ export const ingestOpportunity = inngest.createFunction(
           ingestError: null,
           updatedAt: new Date(),
         })
-        .where(eq(opportunities.id, opportunityId));
+        .where(
+          and(eq(opportunities.id, opportunityId), eq(opportunities.workspaceId, workspaceId)),
+        );
     });
 
     // ── Step 5: Log completion ───────────────────────────────────────────
@@ -274,7 +285,9 @@ export const onIngestFailure = createFailureHandler<OpportunityIngestData>({
     await db
       .update(opportunities)
       .set({ ingestStatus: "failed", ingestError: errorMessage, updatedAt: new Date() })
-      .where(eq(opportunities.id, opportunityId));
+      .where(
+        and(eq(opportunities.id, opportunityId), eq(opportunities.workspaceId, workspaceId)),
+      );
 
     await recordActivity({
       workspaceId,

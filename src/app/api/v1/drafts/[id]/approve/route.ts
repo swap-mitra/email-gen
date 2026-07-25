@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { apiRoute, createApiErrorResponse, parseBody } from "@/lib/api";
 import { approveDraftRequestSchema, approvalSchema } from "@/lib/contracts/api";
 import { approvals, drafts, draftVersions } from "@/db/schema";
@@ -53,6 +53,25 @@ export const POST = apiRoute(
       });
     }
 
+    // The state transition is the lock, not the read above: two concurrent
+    // approvals both pass that check and would each write an approval row.
+    // Only the request that actually moves the draft out of its current state
+    // gets to record one — approvals are the audit trail, so a duplicate is
+    // worse than a spurious 409.
+    const [claimed] = await db
+      .update(drafts)
+      .set({ state: "approved_for_send", updatedAt: new Date() })
+      .where(and(eq(drafts.id, id), ne(drafts.state, "approved_for_send")))
+      .returning();
+
+    if (!claimed) {
+      return createApiErrorResponse({
+        code: "conflict",
+        message: "Draft is already approved.",
+        status: 409,
+      });
+    }
+
     const [approval] = await db
       .insert(approvals)
       .values({
@@ -63,12 +82,6 @@ export const POST = apiRoute(
         note: data.note ?? null,
       })
       .returning();
-
-    // Transition draft to approved state
-    await db
-      .update(drafts)
-      .set({ state: "approved_for_send", updatedAt: new Date() })
-      .where(eq(drafts.id, id));
 
     await recordActivity({
       workspaceId: context.workspace.id,

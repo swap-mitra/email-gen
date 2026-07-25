@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, and, desc } from "drizzle-orm";
-import { apiRoute, createApiErrorResponse, parseBody } from "@/lib/api";
+import { apiRoute, createApiErrorResponse, parseBody, parseLimit } from "@/lib/api";
 import {
   createDraftRequestSchema,
   draftListResponseSchema,
@@ -24,10 +24,7 @@ export const GET = apiRoute("Failed to list drafts.", async (req: Request) => {
   if (response) return response;
 
   const { searchParams } = new URL(req.url);
-  const rawLimit = Number(searchParams.get("limit") ?? DEFAULT_LIMIT);
-  const limit = Number.isFinite(rawLimit)
-    ? Math.min(Math.max(1, rawLimit), MAX_LIMIT)
-    : DEFAULT_LIMIT;
+  const limit = parseLimit(searchParams, { fallback: DEFAULT_LIMIT, max: MAX_LIMIT });
   const state = searchParams.get("state");
   const opportunityId = searchParams.get("opportunityId");
 

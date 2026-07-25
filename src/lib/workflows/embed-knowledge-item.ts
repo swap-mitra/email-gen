@@ -1,5 +1,5 @@
 import { NonRetriableError } from "inngest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   createFailureHandler,
   inngest,
@@ -58,12 +58,21 @@ export const embedKnowledgeItem = inngest.createFunction(
     await step.run("embed-and-persist", async () => {
       const db = getDb();
 
+      // Scoped by workspace as well as id: every row this workflow touches is
+      // addressed by an id taken from the event payload, so the workspace it
+      // claims to belong to is worth verifying rather than trusting — the API
+      // routes scope every equivalent lookup the same way.
       const item = await db.query.knowledgeItems.findFirst({
-        where: eq(knowledgeItems.id, knowledgeItemId),
+        where: and(
+          eq(knowledgeItems.id, knowledgeItemId),
+          eq(knowledgeItems.workspaceId, workspaceId),
+        ),
       });
 
       if (!item) {
-        throw new NonRetriableError(`Knowledge item ${knowledgeItemId} not found.`);
+        throw new NonRetriableError(
+          `Knowledge item ${knowledgeItemId} not found in workspace ${workspaceId}.`,
+        );
       }
 
       const vector = await embedText(`${item.title}\n\n${item.content}`);
@@ -71,7 +80,12 @@ export const embedKnowledgeItem = inngest.createFunction(
       await db
         .update(knowledgeItems)
         .set({ embedding: vector, embedded: true, updatedAt: new Date() })
-        .where(eq(knowledgeItems.id, knowledgeItemId));
+        .where(
+          and(
+            eq(knowledgeItems.id, knowledgeItemId),
+            eq(knowledgeItems.workspaceId, workspaceId),
+          ),
+        );
 
       await recordActivity({
         workspaceId,

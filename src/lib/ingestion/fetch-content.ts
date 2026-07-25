@@ -6,6 +6,37 @@ const MIN_CONTENT_LENGTH = 400; // chars — below this triggers browser fallbac
 const MAX_REDIRECTS = 5;
 
 /**
+ * The URL is user-supplied and points anywhere, so neither the body size nor
+ * the extracted text can be trusted to be reasonable. The timeout alone
+ * doesn't bound them — 15s of a fast response is a lot of bytes to buffer,
+ * and whatever survives extraction goes on to be stored in Postgres.
+ */
+const MAX_RESPONSE_BYTES = 2_000_000;
+const MAX_TEXT_CHARS = 500_000;
+
+/** Reads at most MAX_RESPONSE_BYTES of a response body, then drops the rest. */
+async function readCappedText(response: Response): Promise<string> {
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (total < MAX_RESPONSE_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.length;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+
+  return new TextDecoder().decode(Buffer.concat(chunks).subarray(0, MAX_RESPONSE_BYTES));
+}
+
+/**
  * Result of a content extraction attempt against a URL.
  */
 export type FetchedContent = {
@@ -75,7 +106,8 @@ export function extractReadableContent(
   const text = (contentEl.length > 0 ? contentEl : $("body"))
     .text()
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .slice(0, MAX_TEXT_CHARS);
 
   return { text, title, description };
 }
@@ -123,7 +155,17 @@ export async function fetchAndExtractContent(url: string): Promise<FetchedConten
     throw new Error("Failed to fetch the source URL.");
   }
 
-  const rawHtml = await response.text();
+  // Still a redirect after the loop: either the hop limit was exhausted or a
+  // 3xx arrived with no Location. Neither is a page — falling through would
+  // "successfully" ingest an empty redirect body, since the caller only
+  // rejects statusCode >= 400.
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error(
+      `The source URL redirected more than ${MAX_REDIRECTS} times without returning a page.`,
+    );
+  }
+
+  const rawHtml = await readCappedText(response);
   const { text, title, description } = extractReadableContent(rawHtml);
 
   return {

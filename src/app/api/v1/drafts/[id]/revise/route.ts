@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { eq, and, max } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { apiRoute, createApiErrorResponse, parseBody } from "@/lib/api";
 import { reviseDraftRequestSchema, draftVersionSchema } from "@/lib/contracts/api";
-import { drafts, draftVersions } from "@/db/schema";
+import { drafts } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { insertNextDraftVersion } from "@/lib/draft-versions";
 import { requireWorkspaceContext } from "@/lib/workspaces";
 
 export const POST = apiRoute(
@@ -39,27 +40,14 @@ export const POST = apiRoute(
       });
     }
 
-    // Determine the next version number
-    const [{ maxVersion }] = await db
-      .select({ maxVersion: max(draftVersions.versionNumber) })
-      .from(draftVersions)
-      .where(eq(draftVersions.draftId, id));
-
-    const nextVersion = (maxVersion ?? 0) + 1;
-
-    const [newVersion] = await db
-      .insert(draftVersions)
-      .values({
-        draftId: id,
-        workspaceId: context.workspace.id,
-        versionNumber: nextVersion,
-        subject: data.subject,
-        body: data.body,
-        source: "human_revised",
-        authorUserId: context.userId,
-        groundingRefs: [],
-      })
-      .returning();
+    const newVersion = await insertNextDraftVersion({
+      draftId: id,
+      workspaceId: context.workspace.id,
+      subject: data.subject,
+      body: data.body,
+      source: "human_revised",
+      authorUserId: context.userId,
+    });
 
     // Transition draft state to reflect human review
     await db
@@ -73,7 +61,7 @@ export const POST = apiRoute(
       kind: "draft.revised",
       entityType: "draft",
       entityId: id,
-      payload: { versionNumber: nextVersion, draftVersionId: newVersion.id },
+      payload: { versionNumber: newVersion.versionNumber, draftVersionId: newVersion.id },
     });
 
     return NextResponse.json(draftVersionSchema.parse(newVersion), { status: 201 });

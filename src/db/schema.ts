@@ -156,7 +156,20 @@ export const draftVersions = pgTable("draft_versions", {
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
 
-  /** Sequential version number within the draft (1-based). */
+  /**
+   * Sequential version number within the draft (1-based).
+   *
+   * Unique per draft, enforced by draft_versions_draft_id_version_number_uidx
+   * — declared in drizzle/0005_*.sql and applied by `npm run db:indexes`, not
+   * here. Readers take the highest number, so a duplicate hides a revision
+   * instead of erroring; see insertNextDraftVersion in lib/draft-versions.ts.
+   *
+   * Not declared as unique() in this file on purpose: drizzle-kit 0.31 reads
+   * a two-column unique constraint back with its columns in the wrong order,
+   * so its diff never matches and every `db:push` re-proposes the constraint
+   * — offering to TRUNCATE this table as the way to apply it. Same reason the
+   * expression indexes live in SQL (see scripts/apply-indexes.mjs).
+   */
   versionNumber: integer("version_number").notNull(),
 
   /** Email subject line. */

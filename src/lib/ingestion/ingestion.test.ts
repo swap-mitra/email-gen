@@ -91,6 +91,43 @@ describe("P4 Ingestion — fetchAndExtractContent", () => {
 // extractNormalizedFields unit tests
 // ---------------------------------------------------------------------------
 
+describe("P4 Ingestion — fetch limits", () => {
+  it("rejects a URL that redirects past the hop limit instead of ingesting the 3xx body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("", { status: 302, headers: { location: "https://example.com/next" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAndExtractContent("https://example.com/start")).rejects.toThrow(/redirect/i);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects a 3xx with no Location header", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 302 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAndExtractContent("https://example.com/start")).rejects.toThrow(/redirect/i);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("caps the extracted text rather than storing an unbounded page", async () => {
+    const huge = `<html><body><main>${"word ".repeat(300_000)}</main></body></html>`;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(huge, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAndExtractContent("https://example.com/huge");
+
+    expect(result.text.length).toBeLessThanOrEqual(500_000);
+    expect(result.rawHtml.length).toBeLessThanOrEqual(2_000_000);
+
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("P4 Ingestion — extractNormalizedFields", () => {
   it("extracts company hostname from source URL", () => {
     const fields = extractNormalizedFields(
