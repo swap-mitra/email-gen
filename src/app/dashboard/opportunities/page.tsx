@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { opportunities } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { formatDateTime, opportunityTitle, urlHost } from "@/lib/labels";
+import { LocalTime } from "@/components/local-time";
+import { opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +72,9 @@ export default async function OpportunitiesPage() {
                     </span>
                   </td>
                   <td className="cell-muted">{item.ingestAttempts}</td>
-                  <td className="cell-time">{formatDateTime(item.createdAt)}</td>
+                  <td className="cell-time">
+                    <LocalTime value={item.createdAt} />
+                  </td>
                 </tr>
               ))}
             </tbody>

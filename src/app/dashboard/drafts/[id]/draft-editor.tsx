@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DraftVersionResponse, ExportDraftResponse } from "@/lib/contracts/api";
 
 type VersionView = {
@@ -74,8 +74,20 @@ export function DraftEditor({
     initialExport?.externalAccountEmail ?? null,
   );
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // A previous export that failed is otherwise invisible — the only export
+  // feedback below is gated on "completed".
+  const [error, setError] = useState<string | null>(
+    initialExport?.status === "failed"
+      ? (initialExport.error ?? "The last Gmail export failed.")
+      : null,
+  );
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   function handleStartEditing() {
     setEditSubject(version.subject);

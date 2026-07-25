@@ -38,7 +38,9 @@ export default function AcceptInvitationPage({
   return (
     <main className="auth-shell">
       <div className="auth-card">
-        <h1 className="page-title">Joining workspace…</h1>
+        <h1 className="page-title">
+          {status === "error" ? "Couldn't join workspace" : "Joining workspace…"}
+        </h1>
         {status === "error" && (
           <>
             <p className="opp-error">{message}</p>

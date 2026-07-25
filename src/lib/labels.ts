@@ -127,6 +127,12 @@ export function urlHost(url: string): string {
   }
 }
 
-export function formatDateTime(date: Date): string {
-  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+/**
+ * Pass an explicit `timeZone` when the output has to be deterministic — server
+ * components resolve against the deploy's zone (UTC), not the viewer's, so
+ * user-facing timestamps should go through <LocalTime> instead of calling
+ * this directly.
+ */
+export function formatDateTime(date: Date, timeZone?: string): string {
+  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone });
 }

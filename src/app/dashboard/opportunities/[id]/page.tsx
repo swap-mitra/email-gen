@@ -5,11 +5,11 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { drafts, draftVersions, opportunities } from "@/db/schema";
 import { listActivitiesForEntity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { LocalTime } from "@/components/local-time";
 import {
   displayableFields,
   draftStateBadgeClass,
   formatActivityKind,
-  formatDateTime,
   formatDraftState,
   opportunityTitle,
 } from "@/lib/labels";
@@ -114,9 +114,7 @@ export default async function OpportunityDetailPage({
                   <span className="activity-entity">
                     {activity.actorUserId ? "user action" : "system"}
                   </span>
-                  <time className="activity-time" dateTime={activity.createdAt.toISOString()}>
-                    {formatDateTime(activity.createdAt)}
-                  </time>
+                  <LocalTime className="activity-time" value={activity.createdAt} />
                 </li>
               ))}
             </ul>
@@ -190,7 +188,9 @@ export default async function OpportunityDetailPage({
                           {draft.generationStatus}
                         </span>
                       </td>
-                      <td className="cell-time">{formatDateTime(draft.updatedAt)}</td>
+                      <td className="cell-time">
+                        <LocalTime value={draft.updatedAt} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

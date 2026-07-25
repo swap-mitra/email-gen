@@ -5,7 +5,8 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { approvals, drafts, draftVersions, knowledgeItems, opportunities, sendJobs } from "@/db/schema";
 import { resolveUserName } from "@/lib/users";
 import { getDb } from "@/lib/db";
-import { formatDateTime, opportunityTitle, urlHost } from "@/lib/labels";
+import { LocalTime } from "@/components/local-time";
+import { opportunityTitle, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 import { DraftEditor } from "./draft-editor";
 import { DraftRetry } from "./draft-retry";
@@ -155,8 +156,7 @@ export default async function DraftEditorPage({
 
       {approval && (
         <p className="approval-record">
-          Approved by <strong>{reviewerName}</strong> on{" "}
-          {formatDateTime(approval.createdAt)}
+          Approved by <strong>{reviewerName}</strong> on <LocalTime value={approval.createdAt} />
           {approval.note ? <> — “{approval.note}”</> : null}
         </p>
       )}
