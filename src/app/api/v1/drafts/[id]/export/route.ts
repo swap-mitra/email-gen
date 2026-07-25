@@ -14,7 +14,13 @@ import { recordActivity } from "@/lib/activity";
 import { DeliveryError, type DeliveryErrorReason } from "@/lib/delivery/errors";
 import { deliveryProviders } from "@/lib/delivery/registry";
 import { getDb } from "@/lib/db";
+import { assertUnderRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { requireWorkspaceContext } from "@/lib/workspaces";
+
+// Every other mutating route is rate limited; this one calls out to Gmail on
+// the user's behalf, so it should be too.
+const EXPORT_RATE_LIMIT_MAX = 20;
+const EXPORT_RATE_LIMIT_WINDOW_MINUTES = 10;
 
 /** Maps a delivery failure reason to the HTTP shape it should surface as. */
 function errorResponseForReason(reason: DeliveryErrorReason, message: string) {
@@ -59,6 +65,27 @@ export const POST = apiRoute(
         message: "Only approved drafts can be exported.",
         status: 409,
       });
+    }
+
+    try {
+      await assertUnderRateLimit({
+        table: sendJobs,
+        workspaceIdColumn: sendJobs.workspaceId,
+        createdAtColumn: sendJobs.createdAt,
+        workspaceId: context.workspace.id,
+        windowMinutes: EXPORT_RATE_LIMIT_WINDOW_MINUTES,
+        max: EXPORT_RATE_LIMIT_MAX,
+        action: "draft exports",
+      });
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return createApiErrorResponse({
+          code: "rate_limited",
+          message: err.message,
+          status: 429,
+        });
+      }
+      throw err;
     }
 
     const latestVersion = await db.query.draftVersions.findFirst({
