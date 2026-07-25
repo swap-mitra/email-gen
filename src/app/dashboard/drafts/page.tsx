@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { drafts, draftVersions } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { draftStateBadgeClass, formatDateTime, formatDraftState, urlHost } from "@/lib/labels";
+import { LocalTime } from "@/components/local-time";
+import { draftStateBadgeClass, formatDraftState, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +80,9 @@ export default async function DraftsPage() {
                       {draft.generationStatus}
                     </span>
                   </td>
-                  <td className="cell-time">{formatDateTime(draft.updatedAt)}</td>
+                  <td className="cell-time">
+                    <LocalTime value={draft.updatedAt} />
+                  </td>
                 </tr>
               ))}
             </tbody>

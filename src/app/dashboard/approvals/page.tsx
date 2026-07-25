@@ -1,14 +1,10 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LocalTime } from "@/components/local-time";
 import { drafts, draftVersions } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import {
-  draftStateBadgeClass,
-  formatDateTime,
-  formatDraftState,
-  urlHost,
-} from "@/lib/labels";
+import { draftStateBadgeClass, formatDraftState, urlHost } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 import { QuickApprove } from "./quick-approve";
 
@@ -81,7 +77,9 @@ export default async function ApprovalsPage() {
                       {formatDraftState(draft.state)}
                     </span>
                   </td>
-                  <td className="cell-time">{formatDateTime(draft.updatedAt)}</td>
+                  <td className="cell-time">
+                    <LocalTime value={draft.updatedAt} />
+                  </td>
                   <td>
                     <QuickApprove draftId={draft.id} />
                   </td>

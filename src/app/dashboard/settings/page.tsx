@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { formatDateTime } from "@/lib/labels";
+import { LocalTime } from "@/components/local-time";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 import { MembersPanel } from "./members-panel";
 
@@ -37,7 +37,9 @@ export default async function SettingsPage() {
           </div>
           <div className="opp-field">
             <dt>Created</dt>
-            <dd>{formatDateTime(context.workspace.createdAt)}</dd>
+            <dd>
+              <LocalTime value={context.workspace.createdAt} />
+            </dd>
           </div>
         </dl>
       </div>

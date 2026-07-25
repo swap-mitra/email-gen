@@ -2,8 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { knowledgeItems } from "@/db/schema";
+import { LocalTime } from "@/components/local-time";
 import { getDb } from "@/lib/db";
-import { formatDateTime } from "@/lib/labels";
 import { getActiveWorkspaceContext } from "@/lib/workspaces";
 import { KnowledgeForm } from "./knowledge-form";
 
@@ -111,7 +111,9 @@ export default async function KnowledgePage() {
                         </span>
                       )}
                     </td>
-                    <td className="cell-time">{formatDateTime(item.createdAt)}</td>
+                    <td className="cell-time">
+                      <LocalTime value={item.createdAt} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
