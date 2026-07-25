@@ -69,9 +69,14 @@ export function apiRoute<Args extends unknown[]>(
     try {
       return await handler(...args);
     } catch (error) {
+      // Always the caller-supplied message, never error.message — an
+      // unexpected throw here carries Postgres errors (query text included),
+      // upstream API response bodies, and internal paths, none of which
+      // belong in a client response. The real error goes to the log via
+      // `cause`, correlated by requestId.
       return createApiErrorResponse({
         code: "internal_error",
-        message: error instanceof Error ? error.message : fallbackMessage,
+        message: fallbackMessage,
         status: 500,
         cause: error,
       });

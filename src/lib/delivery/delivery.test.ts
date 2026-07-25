@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildMimeMessage, createGmailDraft } from "@/lib/delivery/gmail-client";
+import { buildMimeMessage, createGmailDraft, safeRecipient } from "@/lib/delivery/gmail-client";
 import { getGoogleAccessToken } from "@/lib/delivery/google-token";
 import { DeliveryError } from "@/lib/delivery/errors";
 import { manualExportProvider } from "@/lib/delivery/providers/manual-export";
@@ -33,6 +33,11 @@ function mockDb({
 // gmail-client.ts — buildMimeMessage (pure)
 // ---------------------------------------------------------------------------
 
+/** The header block is everything before the first blank line. */
+function headerLines(message: string): string[] {
+  return message.split("\r\n\r\n")[0].split("\r\n");
+}
+
 describe("P10 Delivery — buildMimeMessage", () => {
   it("includes a To header when a recipient is known", () => {
     const message = buildMimeMessage({
@@ -54,6 +59,43 @@ describe("P10 Delivery — buildMimeMessage", () => {
   it("RFC 2047-encodes non-ASCII subjects", () => {
     const message = buildMimeMessage({ to: null, subject: "Café opening", body: "Body" });
     expect(message).toMatch(/Subject: =\?UTF-8\?B\?/);
+  });
+
+  it("does not let a subject inject extra headers", () => {
+    const message = buildMimeMessage({
+      to: null,
+      subject: "Hello\r\nBcc: attacker@evil.test",
+      body: "Body",
+    });
+
+    expect(headerLines(message)).not.toContain("Bcc: attacker@evil.test");
+    expect(headerLines(message).filter((l) => l.startsWith("Subject:"))).toHaveLength(1);
+  });
+
+  it("does not let an extracted recipient inject extra headers", () => {
+    const message = buildMimeMessage({
+      to: "hiring@acme.com\r\nBcc: attacker@evil.test",
+      subject: "Subject",
+      body: "Body",
+    });
+
+    // The whole value is not a valid addr-spec, so it is dropped rather than
+    // partially emitted.
+    expect(message).not.toContain("Bcc:");
+    expect(message).not.toContain("To:");
+  });
+
+  it("drops recipients that aren't a plain address", () => {
+    for (const hostile of [
+      '"Name" <a@b.com>, c@d.com',
+      "a@b.com, attacker@evil.test",
+      "a@b.com\nBcc: x@y.com",
+      "not-an-email",
+      "  ",
+    ]) {
+      expect(safeRecipient(hostile)).toBeNull();
+    }
+    expect(safeRecipient(" hiring@acme.com ")).toBe("hiring@acme.com");
   });
 });
 
