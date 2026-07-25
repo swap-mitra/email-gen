@@ -1,14 +1,15 @@
 import { NonRetriableError } from "inngest";
-import { eq, max } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   createFailureHandler,
   inngest,
   DRAFT_GENERATE_EVENT,
   type DraftGenerateData,
 } from "@/lib/inngest";
-import { drafts, draftVersions, opportunities } from "@/db/schema";
+import { drafts, opportunities } from "@/db/schema";
 import { recordActivity } from "@/lib/activity";
 import { getDb } from "@/lib/db";
+import { insertNextDraftVersion } from "@/lib/draft-versions";
 import { retrieveKnowledgeForOpportunity } from "@/lib/ai/retrieval";
 import { generateDraftEmail } from "@/lib/ai/generation";
 import { isOpenRouterConfigured } from "@/lib/ai/openrouter-client";
@@ -46,26 +47,35 @@ export const generateDraft = inngest.createFunction(
     const opportunity = await step.run("mark-running", async () => {
       const db = getDb();
 
+      // Scoped by workspace as well as id: every row this workflow touches is
+      // addressed by an id taken from the event payload, so the workspace it
+      // claims to belong to is worth verifying rather than trusting — the API
+      // routes scope every equivalent lookup the same way.
       const draft = await db.query.drafts.findFirst({
-        where: eq(drafts.id, draftId),
+        where: and(eq(drafts.id, draftId), eq(drafts.workspaceId, workspaceId)),
       });
 
       if (!draft) {
-        throw new NonRetriableError(`Draft ${draftId} not found.`);
+        throw new NonRetriableError(`Draft ${draftId} not found in workspace ${workspaceId}.`);
       }
 
       const opp = await db.query.opportunities.findFirst({
-        where: eq(opportunities.id, opportunityId),
+        where: and(
+          eq(opportunities.id, opportunityId),
+          eq(opportunities.workspaceId, workspaceId),
+        ),
       });
 
       if (!opp) {
-        throw new NonRetriableError(`Opportunity ${opportunityId} not found.`);
+        throw new NonRetriableError(
+          `Opportunity ${opportunityId} not found in workspace ${workspaceId}.`,
+        );
       }
 
       await db
         .update(drafts)
         .set({ generationStatus: "running", updatedAt: new Date() })
-        .where(eq(drafts.id, draftId));
+        .where(and(eq(drafts.id, draftId), eq(drafts.workspaceId, workspaceId)));
 
       await recordActivity({
         workspaceId,
@@ -130,17 +140,9 @@ export const generateDraft = inngest.createFunction(
     await step.run("persist-version", async () => {
       const db = getDb();
 
-      const [{ maxVersion }] = await db
-        .select({ maxVersion: max(draftVersions.versionNumber) })
-        .from(draftVersions)
-        .where(eq(draftVersions.draftId, draftId));
-
-      const nextVersion = (maxVersion ?? 0) + 1;
-
-      await db.insert(draftVersions).values({
+      await insertNextDraftVersion({
         draftId,
         workspaceId,
-        versionNumber: nextVersion,
         subject: generated.subject,
         body: generated.body,
         groundingRefs: generated.groundingRefs,
@@ -150,7 +152,7 @@ export const generateDraft = inngest.createFunction(
       await db
         .update(drafts)
         .set({ state: "draft_generated", generationStatus: "completed", updatedAt: new Date() })
-        .where(eq(drafts.id, draftId));
+        .where(and(eq(drafts.id, draftId), eq(drafts.workspaceId, workspaceId)));
     });
 
     // ── Step 5: Log completion ───────────────────────────────────────────
@@ -186,7 +188,7 @@ export const onGenerateDraftFailure = createFailureHandler<DraftGenerateData>({
     await db
       .update(drafts)
       .set({ generationStatus: "failed", generationError: errorMessage, updatedAt: new Date() })
-      .where(eq(drafts.id, draftId));
+      .where(and(eq(drafts.id, draftId), eq(drafts.workspaceId, workspaceId)));
 
     await recordActivity({
       workspaceId,

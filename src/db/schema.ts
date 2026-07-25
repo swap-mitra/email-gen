@@ -147,41 +147,54 @@ export const drafts = pgTable("drafts", {
 // Append-only log of every body revision.
 // ---------------------------------------------------------------------------
 
-export const draftVersions = pgTable("draft_versions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  draftId: uuid("draft_id")
-    .notNull()
-    .references(() => drafts.id, { onDelete: "cascade" }),
-  workspaceId: uuid("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
+export const draftVersions = pgTable(
+  "draft_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    draftId: uuid("draft_id")
+      .notNull()
+      .references(() => drafts.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
 
-  /** Sequential version number within the draft (1-based). */
-  versionNumber: integer("version_number").notNull(),
+    /**
+     * Sequential version number within the draft (1-based). Unique per draft —
+     * see the constraint below; readers take the highest one, so a duplicate
+     * would silently hide a revision rather than fail.
+     */
+    versionNumber: integer("version_number").notNull(),
 
-  /** Email subject line. */
-  subject: text("subject").notNull(),
+    /** Email subject line. */
+    subject: text("subject").notNull(),
 
-  /** Email body — plain text or markdown. */
-  body: text("body").notNull(),
+    /** Email body — plain text or markdown. */
+    body: text("body").notNull(),
 
-  /**
-   * IDs of the knowledge_items used to ground this version.
-   * Preserves full RAG evidence chain.
-   */
-  groundingRefs: uuid("grounding_refs").array().notNull().default([]),
+    /**
+     * IDs of the knowledge_items used to ground this version.
+     * Preserves full RAG evidence chain.
+     */
+    groundingRefs: uuid("grounding_refs").array().notNull().default([]),
 
-  /**
-   * How this version was created:
-   *   ai_generated | human_revised
-   */
-  source: text("source").notNull().default("ai_generated"),
+    /**
+     * How this version was created:
+     *   ai_generated | human_revised
+     */
+    source: text("source").notNull().default("ai_generated"),
 
-  /** User who created this version (null for AI). */
-  authorUserId: text("author_user_id").references(() => user.id, { onDelete: "set null" }),
+    /** User who created this version (null for AI). */
+    authorUserId: text("author_user_id").references(() => user.id, { onDelete: "set null" }),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    draftVersionNumberUnique: unique("draft_versions_draft_id_version_number_key").on(
+      table.draftId,
+      table.versionNumber,
+    ),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Approvals
