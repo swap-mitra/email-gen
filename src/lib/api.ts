@@ -80,6 +80,30 @@ export function apiRoute<Args extends unknown[]>(
 }
 
 // ---------------------------------------------------------------------------
+// Query parameters
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads a `?limit=` query parameter, clamped to [1, max].
+ *
+ * Note the empty-string case: `Number("")` is 0, which is finite, so a bare
+ * `?limit=` used to clamp to 1 and return a single row instead of falling back
+ * to the default.
+ */
+export function parseLimit(
+  searchParams: URLSearchParams,
+  { fallback, max }: { fallback: number; max: number },
+): number {
+  const raw = searchParams.get("limit");
+  if (raw === null || raw.trim() === "") return fallback;
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  return Math.min(Math.max(1, Math.floor(parsed)), max);
+}
+
+// ---------------------------------------------------------------------------
 // Request body parsing
 // ---------------------------------------------------------------------------
 
