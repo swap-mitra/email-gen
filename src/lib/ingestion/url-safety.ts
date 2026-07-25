@@ -43,6 +43,13 @@ function isPrivateIp(ip: string): boolean {
  * Ingestion fetches user-submitted URLs server-side, so this must run
  * immediately before every outbound request, not just once at submission —
  * callers should re-check on every redirect hop too.
+ *
+ * ponytail: resolves the hostname, then hands the *hostname* to fetch, which
+ * resolves it again — an attacker-controlled resolver can answer public here
+ * and private there (DNS rebinding). Re-checking each hop doesn't close that;
+ * only connecting to the address validated here does, which needs a custom
+ * agent/socket rather than plain fetch. Upgrade if untrusted URLs ever matter
+ * more than they do at one-per-opportunity.
  */
 export async function assertPublicHttpUrl(rawUrl: string): Promise<void> {
   let url: URL;

@@ -10,6 +10,13 @@ export class RateLimitError extends Error {}
  * in the trailing window. Deliberately not an in-memory counter: this app
  * can run as multiple/ephemeral serverless instances, so process-local state
  * wouldn't hold across requests.
+ *
+ * ponytail: counts and then returns, so requests racing at the ceiling can
+ * all pass and overshoot the limit by roughly the concurrency. Closing that
+ * needs either a dedicated counter table with an atomic upsert or folding the
+ * check into each caller's INSERT ... WHERE, both of which cost more than a
+ * bounded overshoot on a soft 10-minute limit is worth. Upgrade if a limit
+ * ever guards spend rather than sloppiness.
  */
 export async function assertUnderRateLimit({
   table,
