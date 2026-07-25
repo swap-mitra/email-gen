@@ -30,6 +30,22 @@ export function middleware(request: NextRequest) {
   // authorization happens at the route/page level via
   // getActiveWorkspaceContext(), same division of responsibility as before.
   if (!getSessionCookie(request)) {
+    // API clients get the 401 the contract promises. Redirecting them to an
+    // HTML sign-in page made requireWorkspaceContext's own `unauthorized`
+    // branch unreachable for the exact case it exists for.
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "unauthorized",
+            message: "Authentication is required.",
+            requestId: crypto.randomUUID(),
+          },
+        },
+        { status: 401 },
+      );
+    }
+
     const signIn = new URL("/sign-in", request.url);
     // Carry the requested page through the OAuth round trip so deep links
     // (invitation URLs especially) survive being bounced to sign-in.
