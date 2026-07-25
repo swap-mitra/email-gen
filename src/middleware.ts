@@ -15,6 +15,9 @@ export const runtime = "nodejs";
 const PUBLIC_PREFIXES = ["/sign-in", "/api/auth", "/api/inngest"];
 
 function isPublicRoute(pathname: string) {
+  // "/" is the marketing landing page — matched exactly, since a "/" prefix
+  // would make every route public.
+  if (pathname === "/") return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
