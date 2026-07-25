@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const BLOB_PREFIX = "ingestion";
 
 /**
@@ -33,11 +35,14 @@ export async function persistRawHtmlArtifact(
 
     return blob.url;
   } catch (err) {
-    // Non-fatal — log to console but do NOT throw or fail the ingestion step
-    console.warn(
-      `[persist-artifact] Failed to upload raw HTML for opportunity ${opportunityId}:`,
-      err instanceof Error ? err.message : err,
-    );
+    // Non-fatal — do NOT throw or fail the ingestion step. Goes through the
+    // structured logger so it lands in log aggregation like every other
+    // server-side warning.
+    logger.warn("persist_raw_html_failed", {
+      opportunityId,
+      source,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

@@ -36,7 +36,10 @@ async function callChatCompletions(
   });
 
   if (!res.ok) {
-    const body = await res.text();
+    // Truncated: this message is stored on the draft as generationError and
+    // rendered in the editor, so a full upstream error body would end up on
+    // the page.
+    const body = (await res.text()).slice(0, 500);
     throw new Error(`OpenRouter chat/completions failed (${res.status}): ${body}`);
   }
 

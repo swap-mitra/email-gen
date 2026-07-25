@@ -1,4 +1,5 @@
 import { extractReadableContent, type FetchedContent } from "./fetch-content";
+import { assertPublicHttpUrl } from "./url-safety";
 
 const BROWSERBASE_API_URL = "https://api.browserbase.com/v1";
 const NAVIGATION_TIMEOUT_MS = 30_000;
@@ -80,6 +81,12 @@ export async function browserbaseFetch(url: string): Promise<BrowserFallbackResu
       "BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID must be set to use the browser fallback.",
     );
   }
+
+  // The direct-fetch path re-validates every redirect hop; this path used to
+  // validate nothing at all, even though it runs against a URL stored minutes
+  // or days earlier whose DNS may since have moved. The browser itself is
+  // remote, so this guards the source URL rather than our own network.
+  await assertPublicHttpUrl(url);
 
   const session = await createSession(apiKey, projectId);
 
