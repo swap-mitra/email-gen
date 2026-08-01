@@ -187,7 +187,7 @@ The dashboard and API routes can request AI generation and Gmail export, but eve
 - pgvector `halfvec` HNSW index for knowledge-item embeddings
 - Self-hosted Google-only auth (Better-Auth) with an organization plugin for workspace tenancy — no separate hosted identity domain to register
 - Append-only draft versions with human revision and reviewer-attributed approval
-- Gmail draft export behind a swappable delivery-provider interface (ships disabled pending Google Cloud OAuth client setup)
+- Gmail draft export behind a swappable delivery-provider interface
 - SSRF guard on every ingested URL and redirect hop
 - Durable, per-workspace rate limiting on costly/abusable actions
 - Admin-only enforcement on knowledge-item management
@@ -262,7 +262,7 @@ Google Cloud Console setup (required for sign-in to work at all):
 
 ## Gmail Export (Delivery)
 
-Approved drafts can be exported into the reviewer's own Gmail drafts folder — never sent directly — via `POST /api/v1/drafts/:id/export`. The button ships disabled with a tooltip until `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set up per the section above — no separate delivery-specific setup is needed, since the `gmail.compose` scope is requested at sign-in.
+Approved drafts can be exported into the reviewer's own Gmail drafts folder — never sent directly — via `POST /api/v1/drafts/:id/export`. No separate delivery-specific setup is needed beyond the Google Cloud steps above — the `gmail.compose` scope is requested at sign-in, and the export route reuses that same OAuth grant.
 
 See [`docs/specs/010-future-delivery-spec.md`](docs/specs/010-future-delivery-spec.md) for the full rationale, including why this is a direct Gmail API integration today rather than the (Developer-Preview-gated) official Gmail MCP server.
 
