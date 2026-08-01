@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { DeliveryError } from "./errors";
 
 const GMAIL_DRAFTS_URL = "https://gmail.googleapis.com/gmail/v1/users/me/drafts";
@@ -88,16 +89,21 @@ export async function createGmailDraft(args: {
     );
   }
   if (res.status === 403) {
+    // A 403 is not always a scope problem — Gmail returns the same status when
+    // the API is disabled on the Cloud project (`accessNotConfigured`), which
+    // no amount of reconnecting will fix. The user-facing message stays
+    // generic, so log what Gmail actually said or the real cause is invisible.
+    logger.error("gmail_draft_forbidden", { body: await res.text() });
     throw new DeliveryError(
       "insufficient_scope",
       "Your Google connection doesn't have Gmail access yet. Reconnect Google to grant it.",
     );
   }
   if (!res.ok) {
-    const body = await res.text();
+    logger.error("gmail_draft_failed", { status: res.status, body: await res.text() });
     throw new DeliveryError(
       "upstream_error",
-      `Gmail API request failed (${res.status}): ${body}`,
+      "Gmail rejected the request. Try again in a moment.",
     );
   }
 
