@@ -457,6 +457,30 @@ a {
   margin-bottom: 16px;
 }
 
+.spec-body {
+  font-size: 0.93rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Sits in the second .spec-col on the landing page — the column supplies the
+   divider and padding, so only the field row needs styling here. */
+.request-access-form {
+  margin-top: 24px;
+}
+
+.request-access-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.request-access-row input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
 .spec-list {
   list-style: none;
   display: flex;

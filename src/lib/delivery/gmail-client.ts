@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import { DeliveryError } from "./errors";
 
 const GMAIL_DRAFTS_URL = "https://gmail.googleapis.com/gmail/v1/users/me/drafts";
+const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const REQUEST_TIMEOUT_MS = 15_000;
 
 /**
@@ -56,26 +57,23 @@ export function buildMimeMessage(args: { to: string | null; subject: string; bod
   return `${headers.join("\r\n")}\r\n\r\n${args.body}`;
 }
 
-/** Creates a draft in the authenticated user's Gmail account via the Gmail
- * REST API. Plain fetch, no SDK — matches this project's other external API
- * clients (see src/lib/ai/openrouter-client.ts). */
-export async function createGmailDraft(args: {
-  accessToken: string;
-  to: string | null;
-  subject: string;
-  body: string;
-}): Promise<{ id: string }> {
-  const raw = base64UrlEncode(buildMimeMessage(args));
-
+/** POSTs a JSON payload to Gmail and maps every failure mode onto a typed
+ * DeliveryError. Plain fetch, no SDK — matches this project's other external
+ * API clients (see src/lib/ai/openrouter-client.ts). */
+async function postToGmail(
+  url: string,
+  payload: Record<string, unknown>,
+  accessToken: string,
+): Promise<{ id: string }> {
   let res: Response;
   try {
-    res = await fetch(GMAIL_DRAFTS_URL, {
+    res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${args.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ message: { raw } }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
@@ -112,4 +110,28 @@ export async function createGmailDraft(args: {
     throw new DeliveryError("upstream_error", "Gmail did not return a draft ID.");
   }
   return { id: json.id };
+}
+
+/** Creates a draft in the authenticated user's Gmail account. */
+export function createGmailDraft(args: {
+  accessToken: string;
+  to: string | null;
+  subject: string;
+  body: string;
+}): Promise<{ id: string }> {
+  const raw = base64UrlEncode(buildMimeMessage(args));
+  return postToGmail(GMAIL_DRAFTS_URL, { message: { raw } }, args.accessToken);
+}
+
+/** Sends a message immediately from the authenticated user's Gmail account.
+ * Used only for the admin's own access-request notifications — user-facing
+ * outreach always stops at a draft. */
+export function sendGmailMessage(args: {
+  accessToken: string;
+  to: string | null;
+  subject: string;
+  body: string;
+}): Promise<{ id: string }> {
+  const raw = base64UrlEncode(buildMimeMessage(args));
+  return postToGmail(GMAIL_SEND_URL, { raw }, args.accessToken);
 }

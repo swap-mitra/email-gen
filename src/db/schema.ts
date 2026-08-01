@@ -242,6 +242,20 @@ export const activities = pgTable("activities", {
 });
 
 // ---------------------------------------------------------------------------
+// Access requests
+// Sign-up is invite-only, so the landing page collects would-be users' email
+// addresses and notifies the admin. The row is what makes the endpoint safe to
+// expose unauthenticated: the unique index collapses repeat submissions to one
+// notification, and the timestamp is what the trailing-window throttle counts.
+// ---------------------------------------------------------------------------
+
+export const accessRequests = pgTable("access_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // Delivery accounts
 // Thin, lazily-written audit/display record of which external account (e.g.
 // Gmail address) a workspace member last exported to. The real OAuth token
@@ -506,3 +520,4 @@ export type Activity = typeof activities.$inferSelect;
 export type DeliveryAccount = typeof deliveryAccounts.$inferSelect;
 export type SendJob = typeof sendJobs.$inferSelect;
 export type SendAttempt = typeof sendAttempts.$inferSelect;
+export type AccessRequest = typeof accessRequests.$inferSelect;
