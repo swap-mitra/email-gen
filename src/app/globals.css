@@ -677,6 +677,20 @@ a {
   margin-bottom: 24px;
 }
 
+.workspace-choices {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.workspace-choices .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
 /* ---------------------------------------------------------------------------
    Opportunity submission form (overview)
    --------------------------------------------------------------------------- */

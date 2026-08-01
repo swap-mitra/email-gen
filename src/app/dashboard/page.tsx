@@ -1,6 +1,6 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
-import { drafts, draftVersions, opportunities } from "@/db/schema";
+import { drafts, draftVersions, member, opportunities, organization } from "@/db/schema";
 import { CreateWorkspaceForm } from "@/components/create-workspace-form";
 import { getDb } from "@/lib/db";
 import { opportunityTitle, urlHost } from "@/lib/labels";
@@ -20,17 +20,30 @@ export default async function DashboardPage() {
 
   /* ── No-org state ─────────────────────────────────────────────── */
   if (!context.orgId) {
+    // A session predating the active-org seeding in src/lib/auth.ts can still
+    // reach here with memberships already in hand — offer those rather than
+    // pushing the member into creating a duplicate workspace.
+    const joined = context.userId
+      ? await getDb()
+          .select({ id: organization.id, name: organization.name })
+          .from(member)
+          .innerJoin(organization, eq(organization.id, member.organizationId))
+          .where(eq(member.userId, context.userId))
+          .orderBy(asc(member.createdAt))
+      : [];
+
     return (
       <div className="setup-prompt">
         <div className="setup-prompt-header">
-          <h1>Create your first workspace</h1>
+          <h1>{joined.length > 0 ? "Choose a workspace" : "Create your first workspace"}</h1>
         </div>
         <div className="setup-prompt-body">
           <p>
-            Create a workspace to get started — every opportunity, draft, and knowledge item is
-            scoped to one workspace.
+            {joined.length > 0
+              ? "Pick up where you left off, or start a new workspace — every opportunity, draft, and knowledge item is scoped to one workspace."
+              : "Create a workspace to get started — every opportunity, draft, and knowledge item is scoped to one workspace."}
           </p>
-          <CreateWorkspaceForm />
+          <CreateWorkspaceForm existing={joined} />
         </div>
       </div>
     );

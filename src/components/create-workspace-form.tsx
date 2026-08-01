@@ -12,11 +12,31 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export function CreateWorkspaceForm() {
+export function CreateWorkspaceForm({
+  existing = [],
+}: {
+  existing?: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [pendingOrgId, setPendingOrgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleOpen(organizationId: string) {
+    setError(null);
+    setPendingOrgId(organizationId);
+
+    const { error: setActiveError } = await authClient.organization.setActive({ organizationId });
+    if (setActiveError) {
+      setError(setActiveError.message ?? "Could not open that workspace.");
+      setPendingOrgId(null);
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,26 +60,47 @@ export function CreateWorkspaceForm() {
     router.refresh();
   }
 
+  const isBusy = isCreating || pendingOrgId !== null;
+
   return (
-    <form className="opp-edit-form" onSubmit={handleSubmit}>
-      <label className="t-label" htmlFor="workspace-name">
-        Workspace name
-      </label>
-      <input
-        id="workspace-name"
-        type="text"
-        required
-        placeholder="Acme Sales"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        disabled={isCreating}
-      />
-      {error && <p className="opp-error">{error}</p>}
-      <div className="opp-actions">
-        <button type="submit" className="btn btn-primary" disabled={isCreating}>
-          {isCreating ? "Creating…" : "Create workspace"}
-        </button>
-      </div>
-    </form>
+    <>
+      {existing.length > 0 && (
+        <ul className="workspace-choices">
+          {existing.map((org) => (
+            <li key={org.id}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleOpen(org.id)}
+                disabled={isBusy}
+              >
+                {pendingOrgId === org.id ? "Opening…" : org.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className="opp-edit-form" onSubmit={handleSubmit}>
+        <label className="t-label" htmlFor="workspace-name">
+          {existing.length > 0 ? "Or create a new workspace" : "Workspace name"}
+        </label>
+        <input
+          id="workspace-name"
+          type="text"
+          required
+          placeholder="Acme Sales"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={isBusy}
+        />
+        {error && <p className="opp-error">{error}</p>}
+        <div className="opp-actions">
+          <button type="submit" className="btn btn-primary" disabled={isBusy}>
+            {isCreating ? "Creating…" : "Create workspace"}
+          </button>
+        </div>
+      </form>
+    </>
   );
 }
