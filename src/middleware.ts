@@ -12,7 +12,14 @@ export const runtime = "nodejs";
 // session — it authenticates via its own signing key, not user auth. /api/auth
 // is Better-Auth's own callback/session/org-mutation endpoint — gating it here
 // would redirect-loop the OAuth callback and every session fetch.
-const PUBLIC_PREFIXES = ["/sign-in", "/api/auth", "/api/inngest"];
+// /api/v1/access-requests is how someone without an account asks for one, so
+// it has to be reachable with no session — it throttles and dedupes itself.
+const PUBLIC_PREFIXES = [
+  "/sign-in",
+  "/api/auth",
+  "/api/inngest",
+  "/api/v1/access-requests",
+];
 
 function isPublicRoute(pathname: string) {
   // "/" is the marketing landing page — matched exactly, since a "/" prefix

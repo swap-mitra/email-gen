@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { RequestAccessForm } from "@/components/request-access-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { auth } from "@/lib/auth";
 
@@ -61,7 +62,9 @@ export default async function Home() {
         </section>
 
         {/* ── Two-column spec strip ────────────────────────────────── */}
-        <div className="spec-strip spec-strip--single">
+        {/* Collapses to one column once signed in, when the right-hand
+            request-access column has nothing to say. */}
+        <div className={`spec-strip${userId ? " spec-strip--single" : ""}`}>
           <div className="spec-col">
             <p className="spec-col-label">What it does</p>
             <h2>The workflow</h2>
@@ -71,6 +74,18 @@ export default async function Home() {
               ))}
             </ul>
           </div>
+
+          {!userId && (
+            <div className="spec-col">
+              <p className="spec-col-label">No account yet?</p>
+              <h2>Request access</h2>
+              <p className="spec-body">
+                Groundwork is invite-only while it&apos;s in beta. Leave your email and the admin
+                will add you.
+              </p>
+              <RequestAccessForm />
+            </div>
+          )}
         </div>
       </main>
     </>

@@ -110,7 +110,9 @@ a {
 .page-shell {
   width: min(1200px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 0 0 80px;
+  /* No bottom padding: the last section is the spec strip, whose columns
+     already carry 40px of their own below the content. */
+  padding: 0;
 }
 
 .auth-shell {
@@ -274,6 +276,48 @@ a {
 
 .btn-danger:hover {
   box-shadow: 4px 4px 0 var(--danger);
+}
+
+/* ---------------------------------------------------------------------------
+   Form fields (shared)
+   Element selectors on purpose. These rules used to be a hand-maintained list
+   of five form classes, so every new form shipped unstyled until someone
+   remembered to add it to four separate selector lists — and one panel ended
+   up borrowing an unrelated form's class just to get a border and padding.
+   Selects are excluded: .org-switcher and the role pickers style themselves.
+   --------------------------------------------------------------------------- */
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="search"],
+input[type="password"],
+textarea {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 12px 14px;
+  border: var(--rule);
+  background: var(--white);
+  color: var(--ink);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  outline: 2px solid var(--yellow-dim);
+  outline-offset: -2px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+input:disabled,
+textarea:disabled {
+  opacity: 0.6;
 }
 
 /* ---------------------------------------------------------------------------
@@ -455,6 +499,30 @@ a {
   font-size: 1.4rem;
   font-weight: 700;
   margin-bottom: 16px;
+}
+
+.spec-body {
+  font-size: 0.93rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Sits in the second .spec-col on the landing page — the column supplies the
+   divider and padding, so only the field row needs styling here. */
+.request-access-form {
+  margin-top: 24px;
+}
+
+.request-access-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.request-access-row input {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .spec-list {
@@ -677,6 +745,20 @@ a {
   margin-bottom: 24px;
 }
 
+.workspace-choices {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.workspace-choices .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
 /* ---------------------------------------------------------------------------
    Opportunity submission form (overview)
    --------------------------------------------------------------------------- */
@@ -699,48 +781,6 @@ a {
 .opp-form input[type="url"] {
   flex: 1;
   min-width: 260px;
-}
-
-.opp-form input,
-.opp-edit-form input,
-.opp-edit-form textarea,
-.opp-approve input,
-.k-form input,
-.k-form textarea {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  padding: 12px 14px;
-  border: var(--rule);
-  background: var(--white);
-  color: var(--ink);
-}
-
-.opp-form input:focus,
-.opp-edit-form input:focus,
-.opp-edit-form textarea:focus,
-.opp-approve input:focus,
-.k-form input:focus,
-.k-form textarea:focus {
-  outline: 2px solid var(--yellow-dim);
-  outline-offset: -2px;
-}
-
-.opp-form input::placeholder,
-.opp-edit-form input::placeholder,
-.opp-edit-form textarea::placeholder,
-.opp-approve input::placeholder,
-.k-form input::placeholder,
-.k-form textarea::placeholder {
-  color: var(--muted);
-}
-
-.opp-form input:disabled,
-.opp-edit-form input:disabled,
-.opp-edit-form textarea:disabled,
-.opp-approve input:disabled,
-.k-form input:disabled,
-.k-form textarea:disabled {
-  opacity: 0.6;
 }
 
 .opp-status-row {

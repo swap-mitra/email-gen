@@ -145,6 +145,16 @@ export const exportDraftResponseSchema = sendJobSchema.extend({
 });
 
 // ---------------------------------------------------------------------------
+// Access requests
+// ---------------------------------------------------------------------------
+
+export const createAccessRequestSchema = z.object({
+  // Capped well under the RFC limit — the address is only ever echoed back to
+  // the admin in a notification, so there's no reason to accept a long one.
+  email: z.string().trim().email().max(254),
+});
+
+// ---------------------------------------------------------------------------
 // Drafts & versions
 // ---------------------------------------------------------------------------
 
