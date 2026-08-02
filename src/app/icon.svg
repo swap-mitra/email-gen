@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Groundwork">
+  <!-- Core-sample mark: three strata, the last one struck in brand yellow —
+       the same motif as the landing hero's survey panel. Ink ground so the
+       icon holds up on both light and dark browser chrome. -->
+  <rect width="64" height="64" fill="#0a0a0a"/>
+  <rect x="12" y="14" width="40" height="9" fill="#f7f5f0"/>
+  <rect x="12" y="27.5" width="27" height="9" fill="#f7f5f0"/>
+  <rect x="12" y="41" width="40" height="9" fill="#f5e642"/>
+</svg>
