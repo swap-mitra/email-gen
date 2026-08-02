@@ -574,6 +574,9 @@ textarea:disabled {
   border-top: var(--rule-heavy);
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Whitespace separates the columns — the vertical rule that used to do it
+     read as a hard split down the middle of the page. */
+  gap: clamp(28px, 5vw, 72px);
 }
 
 .spec-strip--single {
@@ -581,22 +584,11 @@ textarea:disabled {
 }
 
 .spec-strip--single .spec-col {
-  border-right: none;
   max-width: 640px;
 }
 
 .spec-col {
   padding: clamp(12px, 3vh, 40px) 0;
-  border-right: var(--rule-heavy);
-}
-
-.spec-col:last-child {
-  border-right: none;
-  padding-left: 40px;
-}
-
-.spec-col:first-child {
-  padding-right: 40px;
 }
 
 .spec-col-label {
@@ -1514,26 +1506,25 @@ textarea:disabled {
   }
 }
 
-@media (max-width: 768px) {
+/* The spec columns hold their own down to 700px — stacking them earlier made
+   a tablet-portrait window scroll for no reason. */
+@media (max-width: 700px) {
   .spec-strip {
     grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .spec-col {
-    border-right: none;
     border-bottom: var(--rule-heavy);
     padding: clamp(16px, 3vh, 32px) 0;
   }
 
   .spec-col:last-child {
-    padding-left: 0;
     border-bottom: none;
   }
+}
 
-  .spec-col:first-child {
-    padding-right: 0;
-  }
-
+@media (max-width: 768px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
   }
