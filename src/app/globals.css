@@ -432,6 +432,81 @@ textarea:disabled {
 .landing-hero {
   border-bottom: var(--rule-heavy);
   padding: clamp(16px, 3.6vh, 72px) 0 clamp(14px, 2.9vh, 60px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: center;
+}
+
+/* --- Hero brand mark: a surveyed core sample ---------------------------- */
+.hero-visual {
+  min-width: 0;
+}
+
+.hv-core {
+  position: relative;
+  overflow: hidden;
+  border: var(--rule-heavy);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  /* Keyed to vh like the rest of the landing page, so the visual compresses
+     with the window instead of pushing the page past one viewport. */
+  height: clamp(160px, 30vh, 320px);
+}
+
+.hv-band {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: clamp(0.55rem, 0.15vw + 0.5vh, 0.65rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hv-band:last-of-type {
+  border-bottom: none;
+}
+
+.hv-band--accent {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+/* The survey line: an ink rule with a yellow trail behind it, sweeping the
+   full depth of the sample and back. `top` rather than transform so the
+   travel resolves against the panel's clamped height with no magic numbers. */
+.hv-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 26px;
+  border-bottom: 3px solid var(--ink);
+  background: linear-gradient(to bottom, transparent, rgba(245, 230, 66, 0.6));
+  animation: hv-scan 5.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes hv-scan {
+  0%,
+  100% {
+    top: 0;
+  }
+  50% {
+    top: calc(100% - 26px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-scan {
+    animation: none;
+    top: calc(50% - 13px);
+  }
 }
 
 .hero-kicker {
@@ -1427,6 +1502,18 @@ textarea:disabled {
 /* ---------------------------------------------------------------------------
    Responsive
    --------------------------------------------------------------------------- */
+/* The core sample is decorative — below this width the hero needs its full
+   measure for the copy, and dropping it keeps the page inside one viewport. */
+@media (max-width: 900px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .spec-strip {
     grid-template-columns: 1fr;
