@@ -17,7 +17,10 @@ export default async function Home() {
   const userId = session?.user.id ?? null;
 
   return (
-    <>
+    /* Fills exactly one viewport height — see the .landing rules in
+       globals.css, where every vertical step scales with vh so the whole page
+       fits without scrolling. */
+    <div className="landing">
       {/* ── Site header ─────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="site-header-inner">
@@ -99,6 +102,6 @@ export default async function Home() {
           </a>
         </span>
       </footer>
-    </>
+    </div>
   );
 }

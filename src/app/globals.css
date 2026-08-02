@@ -111,7 +111,7 @@ a {
   width: min(1200px, calc(100% - 48px));
   margin: 0 auto;
   /* No bottom padding: the last section is the spec strip, whose columns
-     already carry 40px of their own below the content. */
+     already carry their own below the content. */
   padding: 0;
 }
 
@@ -380,9 +380,58 @@ textarea:disabled {
 /* ---------------------------------------------------------------------------
    Landing page — hero
    --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+   Landing page — one-viewport layout
+
+   The landing page is sized to fit any window without scrolling, so every
+   vertical measurement below (padding, margin, font-size) is a clamp whose
+   middle term carries a vh component: it shrinks with the window instead of
+   holding a fixed px height that eventually overflows. The clamp minimums are
+   the readability floor — measured, the page fits down to a 640px-tall
+   viewport; below that, or on a phone where .spec-strip stacks into one
+   column, it scrolls again rather than shrink text to nothing.
+   --------------------------------------------------------------------------- */
+.landing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing .page-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Absorbs whatever height is left over, so the footer lands on the bottom edge
+   of the viewport instead of leaving a gap under it. align-content centres the
+   single grid row inside that slack, splitting it above and below the columns
+   rather than dumping it all under them — and because it moves the row (not
+   each column), the two column headings stay on the same line. */
+.landing .spec-strip {
+  flex: 1;
+  align-content: center;
+}
+
+/* The header and the controls are shared with the dashboard, which still
+   scrolls normally — only their landing-page instances compress. */
+.landing .site-header-inner {
+  padding: clamp(8px, 1.3vh, 16px) 0;
+}
+
+.landing .btn,
+.landing input {
+  padding-block: clamp(8px, 1.4vh, 12px);
+}
+
+.landing .header-nav > a,
+.landing .header-nav > button {
+  padding-block: clamp(6px, 1.1vh, 10px);
+}
+
 .landing-hero {
   border-bottom: var(--rule-heavy);
-  padding: 72px 0 60px;
+  padding: clamp(16px, 3.6vh, 72px) 0 clamp(14px, 2.9vh, 60px);
 }
 
 .hero-kicker {
@@ -392,7 +441,7 @@ textarea:disabled {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.6vh, 20px);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -408,11 +457,13 @@ textarea:disabled {
 
 .hero-headline {
   font-family: var(--font-hero);
-  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  /* Was 3.5vw alone — width-only scaling grew the headline on a wide, short
+     window, which is exactly where the page has least room. */
+  font-size: clamp(1.4rem, 1.5vw + 1.7vh, 3.2rem);
   font-weight: 900;
-  line-height: 1.35;
+  line-height: 1.25;
   max-width: 22ch;
-  margin-bottom: 32px;
+  margin-bottom: clamp(12px, 2.6vh, 32px);
 }
 
 .hero-headline em {
@@ -427,11 +478,11 @@ textarea:disabled {
 }
 
 .hero-body {
-  font-size: 1.05rem;
-  line-height: 1.75;
+  font-size: clamp(0.85rem, 0.3vw + 0.85vh, 1.05rem);
+  line-height: 1.6;
   max-width: 52ch;
   color: var(--muted);
-  margin-bottom: 36px;
+  margin-bottom: clamp(14px, 3vh, 36px);
   font-weight: 500;
 }
 
@@ -460,7 +511,7 @@ textarea:disabled {
 }
 
 .spec-col {
-  padding: 40px 0;
+  padding: clamp(12px, 3vh, 40px) 0;
   border-right: var(--rule-heavy);
 }
 
@@ -480,7 +531,7 @@ textarea:disabled {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.6vh, 20px);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -496,14 +547,14 @@ textarea:disabled {
 
 .spec-col h2 {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: clamp(1.05rem, 0.4vw + 0.9vh, 1.4rem);
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: clamp(8px, 1.4vh, 16px);
 }
 
 .spec-body {
-  font-size: 0.93rem;
-  line-height: 1.6;
+  font-size: clamp(0.8rem, 0.25vw + 0.75vh, 0.93rem);
+  line-height: 1.55;
   color: var(--muted);
 }
 
@@ -514,8 +565,8 @@ textarea:disabled {
    shell keeps the zero bottom padding the spec strip depends on. */
 .site-footer {
   width: min(1200px, calc(100% - 48px));
-  margin: 32px auto 40px;
-  padding: 16px 20px;
+  margin: clamp(8px, 1.6vh, 32px) auto clamp(8px, 1.8vh, 40px);
+  padding: clamp(9px, 1.5vh, 16px) 20px;
   border: var(--rule);
   display: flex;
   align-items: center;
@@ -540,7 +591,7 @@ textarea:disabled {
 /* Sits in the second .spec-col on the landing page — the column supplies the
    divider and padding, so only the field row needs styling here. */
 .request-access-form {
-  margin-top: 24px;
+  margin-top: clamp(12px, 2.4vh, 24px);
 }
 
 .request-access-row {
@@ -566,10 +617,10 @@ textarea:disabled {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 0;
+  padding: clamp(5px, 0.8vh, 12px) 0;
   border-top: 1px solid var(--divider);
-  font-size: 0.93rem;
-  line-height: 1.5;
+  font-size: clamp(0.8rem, 0.25vw + 0.75vh, 0.93rem);
+  line-height: 1.45;
   color: var(--muted);
 }
 
@@ -1384,7 +1435,7 @@ textarea:disabled {
   .spec-col {
     border-right: none;
     border-bottom: var(--rule-heavy);
-    padding: 32px 0;
+    padding: clamp(16px, 3vh, 32px) 0;
   }
 
   .spec-col:last-child {
