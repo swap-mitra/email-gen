@@ -88,6 +88,17 @@ export default async function Home() {
           )}
         </div>
       </main>
+
+      {/* ── Footer ──────────────────────────────────────────────────── */}
+      <footer className="site-footer">
+        <span>Do the groundwork before you say a word.</span>
+        <span>
+          Designed and developed by{" "}
+          <a href="https://www.linkedin.com/in/swapnilmitra/" target="_blank" rel="noreferrer">
+            Swapnil Mitra
+          </a>
+        </span>
+      </footer>
     </>
   );
 }

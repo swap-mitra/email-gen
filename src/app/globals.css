@@ -507,6 +507,36 @@ textarea:disabled {
   color: var(--muted);
 }
 
+/* ---------------------------------------------------------------------------
+   Site footer
+   --------------------------------------------------------------------------- */
+/* Carries its own width clamp rather than sitting inside .page-shell, so the
+   shell keeps the zero bottom padding the spec strip depends on. */
+.site-footer {
+  width: min(1200px, calc(100% - 48px));
+  margin: 32px auto 40px;
+  padding: 16px 20px;
+  border: var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.site-footer a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
 /* Sits in the second .spec-col on the landing page — the column supplies the
    divider and padding, so only the field row needs styling here. */
 .request-access-form {
