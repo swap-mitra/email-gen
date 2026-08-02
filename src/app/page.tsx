@@ -17,7 +17,10 @@ export default async function Home() {
   const userId = session?.user.id ?? null;
 
   return (
-    <>
+    /* Fills exactly one viewport height — see the .landing rules in
+       globals.css, where every vertical step scales with vh so the whole page
+       fits without scrolling. */
+    <div className="landing">
       {/* ── Site header ─────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="site-header-inner">
@@ -39,25 +42,43 @@ export default async function Home() {
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <main className="page-shell">
         <section className="landing-hero">
-          <p className="hero-kicker">Do the groundwork before you say a word.</p>
-          <h1 className="t-display hero-headline">
-            Outreach from real signals, not <em>copy-paste</em> prompts.
-          </h1>
-          <p className="hero-body">
-            Groundwork turns a company or hiring URL into a structured opportunity, grounds the
-            message in your team&apos;s proof points, and routes every draft through a reviewable
-            workspace workflow.
-          </p>
-          <div className="hero-actions">
-            {userId ? (
-              <Link className="btn btn-primary" href="/dashboard">
-                Open dashboard
-              </Link>
-            ) : (
-              <Link className="btn btn-primary" href="/sign-in">
-                Sign in with Google
-              </Link>
-            )}
+          <div className="hero-copy">
+            <p className="hero-kicker">Do the groundwork before you say a word.</p>
+            <h1 className="t-display hero-headline">
+              Outreach from real signals, not <em>copy-paste</em> prompts.
+            </h1>
+            <p className="hero-body">
+              Groundwork turns a company or hiring URL into a structured opportunity, grounds the
+              message in your team&apos;s proof points, and routes every draft through a reviewable
+              workspace workflow.
+            </p>
+            <div className="hero-actions">
+              {userId ? (
+                <Link className="btn btn-primary" href="/dashboard">
+                  Open dashboard
+                </Link>
+              ) : (
+                <Link className="btn btn-primary" href="/sign-in">
+                  Sign in with Google
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Decorative brand mark — a core sample of the pipeline, surveyed
+              top to bottom. Same three-band motif as the favicon. Hidden from
+              assistive tech: it repeats what the copy already says. */}
+          <div className="hero-visual" aria-hidden="true">
+            <p className="spec-col-label">Signal path</p>
+            <div className="hv-core">
+              {["Source", "Signal", "Evidence"].map((band) => (
+                <span className="hv-band" key={band}>
+                  {band}
+                </span>
+              ))}
+              <span className="hv-band hv-band--accent">Draft</span>
+              <span className="hv-scan" />
+            </div>
           </div>
         </section>
 
@@ -88,6 +109,17 @@ export default async function Home() {
           )}
         </div>
       </main>
-    </>
+
+      {/* ── Footer ──────────────────────────────────────────────────── */}
+      <footer className="site-footer">
+        <span>Do the groundwork before you say a word.</span>
+        <span>
+          Designed and developed by{" "}
+          <a href="https://www.linkedin.com/in/swapnilmitra/" target="_blank" rel="noreferrer">
+            Swapnil Mitra
+          </a>
+        </span>
+      </footer>
+    </div>
   );
 }

@@ -111,7 +111,7 @@ a {
   width: min(1200px, calc(100% - 48px));
   margin: 0 auto;
   /* No bottom padding: the last section is the spec strip, whose columns
-     already carry 40px of their own below the content. */
+     already carry their own below the content. */
   padding: 0;
 }
 
@@ -380,9 +380,133 @@ textarea:disabled {
 /* ---------------------------------------------------------------------------
    Landing page — hero
    --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+   Landing page — one-viewport layout
+
+   The landing page is sized to fit any window without scrolling, so every
+   vertical measurement below (padding, margin, font-size) is a clamp whose
+   middle term carries a vh component: it shrinks with the window instead of
+   holding a fixed px height that eventually overflows. The clamp minimums are
+   the readability floor — measured, the page fits down to a 640px-tall
+   viewport; below that, or on a phone where .spec-strip stacks into one
+   column, it scrolls again rather than shrink text to nothing.
+   --------------------------------------------------------------------------- */
+.landing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing .page-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Absorbs whatever height is left over, so the footer lands on the bottom edge
+   of the viewport instead of leaving a gap under it. align-content centres the
+   single grid row inside that slack, splitting it above and below the columns
+   rather than dumping it all under them — and because it moves the row (not
+   each column), the two column headings stay on the same line. */
+.landing .spec-strip {
+  flex: 1;
+  align-content: center;
+}
+
+/* The header and the controls are shared with the dashboard, which still
+   scrolls normally — only their landing-page instances compress. */
+.landing .site-header-inner {
+  padding: clamp(8px, 1.3vh, 16px) 0;
+}
+
+.landing .btn,
+.landing input {
+  padding-block: clamp(8px, 1.4vh, 12px);
+}
+
+.landing .header-nav > a,
+.landing .header-nav > button {
+  padding-block: clamp(6px, 1.1vh, 10px);
+}
+
 .landing-hero {
   border-bottom: var(--rule-heavy);
-  padding: 72px 0 60px;
+  padding: clamp(16px, 3.6vh, 72px) 0 clamp(14px, 2.9vh, 60px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: center;
+}
+
+/* --- Hero brand mark: a surveyed core sample ---------------------------- */
+.hero-visual {
+  min-width: 0;
+}
+
+.hv-core {
+  position: relative;
+  overflow: hidden;
+  border: var(--rule-heavy);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  /* Keyed to vh like the rest of the landing page, so the visual compresses
+     with the window instead of pushing the page past one viewport. */
+  height: clamp(160px, 30vh, 320px);
+}
+
+.hv-band {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: clamp(0.55rem, 0.15vw + 0.5vh, 0.65rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hv-band:last-of-type {
+  border-bottom: none;
+}
+
+.hv-band--accent {
+  background: var(--yellow);
+  color: var(--on-yellow);
+}
+
+/* The survey line: an ink rule with a yellow trail behind it, sweeping the
+   full depth of the sample and back. `top` rather than transform so the
+   travel resolves against the panel's clamped height with no magic numbers. */
+.hv-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 26px;
+  border-bottom: 3px solid var(--ink);
+  background: linear-gradient(to bottom, transparent, rgba(245, 230, 66, 0.6));
+  animation: hv-scan 5.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes hv-scan {
+  0%,
+  100% {
+    top: 0;
+  }
+  50% {
+    top: calc(100% - 26px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-scan {
+    animation: none;
+    top: calc(50% - 13px);
+  }
 }
 
 .hero-kicker {
@@ -392,7 +516,7 @@ textarea:disabled {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.6vh, 20px);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -408,11 +532,13 @@ textarea:disabled {
 
 .hero-headline {
   font-family: var(--font-hero);
-  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  /* Was 3.5vw alone — width-only scaling grew the headline on a wide, short
+     window, which is exactly where the page has least room. */
+  font-size: clamp(1.4rem, 1.5vw + 1.7vh, 3.2rem);
   font-weight: 900;
-  line-height: 1.35;
+  line-height: 1.25;
   max-width: 22ch;
-  margin-bottom: 32px;
+  margin-bottom: clamp(12px, 2.6vh, 32px);
 }
 
 .hero-headline em {
@@ -427,11 +553,11 @@ textarea:disabled {
 }
 
 .hero-body {
-  font-size: 1.05rem;
-  line-height: 1.75;
+  font-size: clamp(0.85rem, 0.3vw + 0.85vh, 1.05rem);
+  line-height: 1.6;
   max-width: 52ch;
   color: var(--muted);
-  margin-bottom: 36px;
+  margin-bottom: clamp(14px, 3vh, 36px);
   font-weight: 500;
 }
 
@@ -448,6 +574,9 @@ textarea:disabled {
   border-top: var(--rule-heavy);
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* Whitespace separates the columns — the vertical rule that used to do it
+     read as a hard split down the middle of the page. */
+  gap: clamp(28px, 5vw, 72px);
 }
 
 .spec-strip--single {
@@ -455,22 +584,11 @@ textarea:disabled {
 }
 
 .spec-strip--single .spec-col {
-  border-right: none;
   max-width: 640px;
 }
 
 .spec-col {
-  padding: 40px 0;
-  border-right: var(--rule-heavy);
-}
-
-.spec-col:last-child {
-  border-right: none;
-  padding-left: 40px;
-}
-
-.spec-col:first-child {
-  padding-right: 40px;
+  padding: clamp(12px, 3vh, 40px) 0;
 }
 
 .spec-col-label {
@@ -480,7 +598,7 @@ textarea:disabled {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.6vh, 20px);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -496,21 +614,51 @@ textarea:disabled {
 
 .spec-col h2 {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: clamp(1.05rem, 0.4vw + 0.9vh, 1.4rem);
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: clamp(8px, 1.4vh, 16px);
 }
 
 .spec-body {
-  font-size: 0.93rem;
-  line-height: 1.6;
+  font-size: clamp(0.8rem, 0.25vw + 0.75vh, 0.93rem);
+  line-height: 1.55;
   color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Site footer
+   --------------------------------------------------------------------------- */
+/* Carries its own width clamp rather than sitting inside .page-shell, so the
+   shell keeps the zero bottom padding the spec strip depends on. */
+.site-footer {
+  width: min(1200px, calc(100% - 48px));
+  margin: clamp(8px, 1.6vh, 32px) auto clamp(8px, 1.8vh, 40px);
+  padding: clamp(9px, 1.5vh, 16px) 20px;
+  border: var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.site-footer a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
 }
 
 /* Sits in the second .spec-col on the landing page — the column supplies the
    divider and padding, so only the field row needs styling here. */
 .request-access-form {
-  margin-top: 24px;
+  margin-top: clamp(12px, 2.4vh, 24px);
 }
 
 .request-access-row {
@@ -536,10 +684,10 @@ textarea:disabled {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 0;
+  padding: clamp(5px, 0.8vh, 12px) 0;
   border-top: 1px solid var(--divider);
-  font-size: 0.93rem;
-  line-height: 1.5;
+  font-size: clamp(0.8rem, 0.25vw + 0.75vh, 0.93rem);
+  line-height: 1.45;
   color: var(--muted);
 }
 
@@ -1346,26 +1494,37 @@ textarea:disabled {
 /* ---------------------------------------------------------------------------
    Responsive
    --------------------------------------------------------------------------- */
-@media (max-width: 768px) {
-  .spec-strip {
+/* The core sample is decorative — below this width the hero needs its full
+   measure for the copy, and dropping it keeps the page inside one viewport. */
+@media (max-width: 900px) {
+  .landing-hero {
     grid-template-columns: 1fr;
   }
 
+  .hero-visual {
+    display: none;
+  }
+}
+
+/* The spec columns hold their own down to 700px — stacking them earlier made
+   a tablet-portrait window scroll for no reason. */
+@media (max-width: 700px) {
+  .spec-strip {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
   .spec-col {
-    border-right: none;
     border-bottom: var(--rule-heavy);
-    padding: 32px 0;
+    padding: clamp(16px, 3vh, 32px) 0;
   }
 
   .spec-col:last-child {
-    padding-left: 0;
     border-bottom: none;
   }
+}
 
-  .spec-col:first-child {
-    padding-right: 0;
-  }
-
+@media (max-width: 768px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
   }
